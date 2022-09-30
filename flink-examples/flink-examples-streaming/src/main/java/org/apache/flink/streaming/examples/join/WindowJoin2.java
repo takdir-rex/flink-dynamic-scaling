@@ -69,7 +69,7 @@ public class WindowJoin2 {
 
         Configuration conf = new Configuration();
         conf.setInteger("taskmanager.numberOfTaskSlots", 8);
-        // for testing more than 1 task manager, set ConfigConstants.DEFAULT_LOCAL_NUMBER_TASK_MANAGER
+        conf.setInteger("local.number-taskmanager", 2); // for testing more than 1 task manager
         final File checkpointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "checkpoint");
         final File savepointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "savepoint");
 
@@ -115,34 +115,34 @@ public class WindowJoin2 {
                         .name("WM salaries")
                         .snapshotGroup("snapshot-0");
 
-//        DataStream<Tuple2<String, Integer>> gradesFordwarder = grades.map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
-//
-//            @Override
-//            public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
-//                if(Calendar.getInstance().get(Calendar.SECOND) == 0){
-//                    //throw new Exception("Simulate failed");
-//                }
-//                return value;
-//            }
-//        }).snapshotGroup("snapshot-1");
-//
-//        DataStream<Tuple2<String, Integer>> salariesFordwarder = salaries.map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
-//
-//            @Override
-//            public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
-//                return value;
-//            }
-//        }).snapshotGroup("snapshot-1");
+        DataStream<Tuple2<String, Integer>> gradesFordwarder = grades.map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+
+            @Override
+            public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
+                if(Calendar.getInstance().get(Calendar.SECOND) == 0){
+                    //throw new Exception("Simulate failed");
+                }
+                return value;
+            }
+        }).name("FW Grades").setParallelism(1).snapshotGroup("snapshot-0");
+
+        DataStream<Tuple2<String, Integer>> salariesFordwarder = salaries.map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+
+            @Override
+            public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
+                return value;
+            }
+        }).name("FW Salaries").setParallelism(1).snapshotGroup("snapshot-0");
 
         // run the actual window join program
         // for testability, this functionality is in a separate method.
         DataStream<Tuple3<String, Integer, Integer>> joinedStream =
-                runWindowJoin(grades, salaries, windowSize);
+                runWindowJoin(gradesFordwarder, salariesFordwarder, windowSize);
 
         ((SingleOutputStreamOperator) joinedStream)
                 .uid("join")
                 .name("Join")
-                .snapshotGroup("snapshot-1").setParallelism(1);
+                .snapshotGroup("snapshot-1").setParallelism(2);
 
 //        DataStream<Tuple3<String, Integer, Integer>> joinedStream2 =
 //                runWindowJoin(grades, salaries, windowSize);
