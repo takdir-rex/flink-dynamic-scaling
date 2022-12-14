@@ -24,6 +24,7 @@ import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.scheduler.DeploymentOption;
 import org.apache.flink.runtime.scheduler.ExecutionVertexDeploymentOption;
 import org.apache.flink.runtime.scheduler.SchedulerOperations;
+import org.apache.flink.runtime.scheduler.adapter.DefaultExecutionTopology;
 import org.apache.flink.util.IterableUtils;
 
 import java.util.ArrayList;
@@ -67,6 +68,7 @@ public class PipelinedRegionSchedulingStrategy implements SchedulingStrategy {
 
         this.schedulerOperations = checkNotNull(schedulerOperations);
         this.schedulingTopology = checkNotNull(schedulingTopology);
+        ((DefaultExecutionTopology) this.schedulingTopology).setSchedulingStrategy(this);
 
         init();
     }
@@ -302,6 +304,14 @@ public class PipelinedRegionSchedulingStrategy implements SchedulingStrategy {
     @VisibleForTesting
     Set<ConsumedPartitionGroup> getCrossRegionConsumedPartitionGroups() {
         return Collections.unmodifiableSet(crossRegionConsumedPartitionGroups);
+    }
+
+    public SchedulerOperations getSchedulerOperations() {
+        return schedulerOperations;
+    }
+
+    public Map<SchedulingPipelinedRegion, List<ExecutionVertexID>> getRegionVerticesSorted() {
+        return regionVerticesSorted;
     }
 
     /** The factory for creating {@link PipelinedRegionSchedulingStrategy}. */

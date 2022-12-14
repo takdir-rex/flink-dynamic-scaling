@@ -51,6 +51,11 @@ public class SingleRecordWriter<T extends IOReadableWritable> implements RecordW
     }
 
     @Override
+    public int getNumberOfRecordWriters() {
+        return 1;
+    }
+
+    @Override
     public CompletableFuture<?> getAvailableFuture() {
         return recordWriter.getAvailableFuture();
     }

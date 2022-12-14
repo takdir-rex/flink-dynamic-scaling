@@ -87,6 +87,12 @@ public interface TaskExecutorGateway
     CompletableFuture<Acknowledge> submitTask(
             TaskDeploymentDescriptor tdd, JobMasterId jobMasterId, @RpcTimeout Time timeout);
 
+    CompletableFuture<Acknowledge> updateSubtaskParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, @RpcTimeout Time timeout);
+
+    CompletableFuture<Acknowledge> updateSubpartitionParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, @RpcTimeout Time timeout);
+
     /**
      * Update the task where the given partitions can be found.
      *

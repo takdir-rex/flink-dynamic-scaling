@@ -30,6 +30,8 @@ public interface VertexParallelismInformation {
      */
     int getParallelism();
 
+    void setParallelism(int parallelism);
+
     /**
      * Returns the vertex's max parallelism.
      *

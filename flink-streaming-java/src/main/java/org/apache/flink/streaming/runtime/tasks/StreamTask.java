@@ -40,6 +40,7 @@ import org.apache.flink.runtime.execution.CancelTaskException;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
+import org.apache.flink.runtime.io.network.api.writer.ChannelSelectorRecordWriter;
 import org.apache.flink.runtime.io.network.api.writer.MultipleRecordWriters;
 import org.apache.flink.runtime.io.network.api.writer.NonRecordWriter;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
@@ -82,6 +83,8 @@ import org.apache.flink.streaming.runtime.io.RecordWriterOutput;
 import org.apache.flink.streaming.runtime.io.StreamInputProcessor;
 import org.apache.flink.streaming.runtime.io.checkpointing.CheckpointBarrierHandler;
 import org.apache.flink.streaming.runtime.partitioner.ConfigurableStreamPartitioner;
+import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
+import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.tasks.bufferdebloat.BufferDebloater;
@@ -495,6 +498,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      */
     protected void processInput(MailboxDefaultAction.Controller controller) throws Exception {
         DataInputStatus status = inputProcessor.processInput();
+        String opName = getName();
+//        if(opName.contains("Sink (1")){
+//            System.out.println("#### " + getName() + " " + status);
+//        }
         switch (status) {
             case MORE_AVAILABLE:
                 if (recordWriter.isAvailable()) {
@@ -1273,8 +1280,17 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         FlinkSecurityManager.monitorUserSystemExitForCurrentThread();
         try {
             if (environment
+                    .getJobVertex().isInputVertex() && Objects.equals(
+                    environment.getJobVertex().getSnapshotGroup(),
+                    checkpointOptions.getSnapshotGroup())) { //source is included in snapshot group
+                if (performCheckpoint(checkpointMetaData, checkpointOptions, checkpointMetrics)) {
+                    if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
+                        runSynchronousSavepointMailboxLoop();
+                    }
+                }
+            } else if (environment
                     .getJobVertex()
-                    .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) {
+                    .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) { //a direct upstream
                 // only send checkpoint barrier without recording own snapshot
                 sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
             } else {
@@ -1807,5 +1823,20 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     @Override
     public final Environment getEnvironment() {
         return environment;
+    }
+
+    public void reloadRecordWriter(){
+        for (int i = 0; i < recordWriter.getNumberOfRecordWriters(); i++) {
+            RecordWriter rw = recordWriter.getRecordWriter(i);
+            int num = rw.reloadNumberOfChannels();
+            if(rw instanceof ChannelSelectorRecordWriter){
+                ChannelSelectorRecordWriter csrw = (ChannelSelectorRecordWriter) rw;
+                if(csrw.getChannelSelector() instanceof ForwardPartitioner && num > 1){
+                    csrw.setChannelSelector(new RebalancePartitioner<Object>());
+                    csrw.getChannelSelector().setup(num);
+                }
+            }
+
+        }
     }
 }

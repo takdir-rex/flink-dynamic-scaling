@@ -50,7 +50,7 @@ public class PartitionDescriptor implements Serializable {
     private final ResultPartitionType partitionType;
 
     /** The number of subpartitions. */
-    private final int numberOfSubpartitions;
+    public int numberOfSubpartitions;
 
     /** Connection index to identify this partition of intermediate result. */
     private final int connectionIndex;

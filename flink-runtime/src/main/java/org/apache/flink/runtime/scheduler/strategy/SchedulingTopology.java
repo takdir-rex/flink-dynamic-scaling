@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.scheduler.strategy;
 
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.topology.Topology;
 
 /** Topology of {@link SchedulingExecutionVertex}. */
@@ -49,4 +50,6 @@ public interface SchedulingTopology
      */
     SchedulingResultPartition getResultPartition(
             IntermediateResultPartitionID intermediateResultPartitionId);
+
+    void changeParallelism(int jobVertexIndex, int newParallelism);
 }

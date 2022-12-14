@@ -39,7 +39,7 @@ public class ResultPartitionDeploymentDescriptor implements Serializable {
 
     private static final long serialVersionUID = 6343547936086963705L;
 
-    private final PartitionDescriptor partitionDescriptor;
+    public PartitionDescriptor partitionDescriptor;
 
     private final ShuffleDescriptor shuffleDescriptor;
 

@@ -36,7 +36,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public final class ChannelSelectorRecordWriter<T extends IOReadableWritable>
         extends RecordWriter<T> {
 
-    private final ChannelSelector<T> channelSelector;
+    private ChannelSelector<T> channelSelector;
+    private final String taskName;
 
     ChannelSelectorRecordWriter(
             ResultPartitionWriter writer,
@@ -47,11 +48,17 @@ public final class ChannelSelectorRecordWriter<T extends IOReadableWritable>
 
         this.channelSelector = checkNotNull(channelSelector);
         this.channelSelector.setup(numberOfChannels);
+        this.taskName = taskName;
     }
 
     @Override
     public void emit(T record) throws IOException {
-        emit(record, channelSelector.selectChannel(record));
+        int ch = channelSelector.selectChannel(record);
+        if(taskName.contains("Join")){
+//            System.out.println("#### " + taskName + " --> " + ch);
+//            System.out.println("#### " + numberOfChannels);
+        }
+        emit(record, ch);
     }
 
     @Override
@@ -70,5 +77,18 @@ public final class ChannelSelectorRecordWriter<T extends IOReadableWritable>
         if (flushAlways) {
             flushAll();
         }
+    }
+
+    public int reloadNumberOfChannels(){
+        super.reloadNumberOfChannels();
+        return numberOfChannels;
+    }
+
+    public ChannelSelector<T> getChannelSelector() {
+        return channelSelector;
+    }
+
+    public void setChannelSelector(ChannelSelector<T> channelSelector) {
+        this.channelSelector = channelSelector;
     }
 }

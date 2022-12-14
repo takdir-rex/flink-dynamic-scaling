@@ -705,6 +705,17 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                 throw new TaskSubmissionException("Could not submit task.", e);
             }
 
+            if (tdd.getAttemptNumber() > 0){//after restarting
+                if(taskInformation.getTaskName().startsWith("Sink") && tdd.getSubtaskIndex() == 0){ //sibling
+                    taskInformation.setNumberOfSubtasks(2);
+                }
+                if(taskInformation.getTaskName().equalsIgnoreCase("join")){ //upstream
+                    for (ResultPartitionDeploymentDescriptor rpdd : tdd.getProducedPartitions()){
+                        rpdd.partitionDescriptor.numberOfSubpartitions = 2;
+                    }
+                }
+            }
+
             Task task =
                     new Task(
                             jobInformation,
@@ -767,6 +778,56 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             }
         } catch (TaskSubmissionException e) {
             return FutureUtils.completedExceptionally(e);
+        }
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> updateSubtaskParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
+        final Task task = taskSlotTable.getTask(executionAttemptID);
+
+        if (task != null) {
+            try {
+
+                task.updateSubtaskParallelism(newParallelism);
+
+                return CompletableFuture.completedFuture(Acknowledge.get());
+            } catch (Throwable t) {
+                return FutureUtils.completedExceptionally(
+                        new TaskException(
+                                "Cannot update task for execution " + executionAttemptID + '.', t));
+            }
+        } else {
+            final String message =
+                    "Cannot find task to be updated for execution " + executionAttemptID + '.';
+
+            log.debug(message);
+            return FutureUtils.completedExceptionally(new TaskException(message));
+        }
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
+        final Task task = taskSlotTable.getTask(executionAttemptID);
+
+        if (task != null) {
+            try {
+
+                task.updateSubpartitionParallelism(newParallelism);
+
+                return CompletableFuture.completedFuture(Acknowledge.get());
+            } catch (Throwable t) {
+                return FutureUtils.completedExceptionally(
+                        new TaskException(
+                                "Cannot update task for execution " + executionAttemptID + '.', t));
+            }
+        } else {
+            final String message =
+                    "Cannot find task to be updated for execution " + executionAttemptID + '.';
+
+            log.debug(message);
+            return FutureUtils.completedExceptionally(new TaskException(message));
         }
     }
 

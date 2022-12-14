@@ -30,11 +30,11 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public class TaskInfo {
 
     private final String taskName;
-    private final String taskNameWithSubtasks;
+    private String taskNameWithSubtasks;
     private final String allocationIDAsString;
     private final int maxNumberOfParallelSubtasks;
     private final int indexOfSubtask;
-    private final int numberOfParallelSubtasks;
+    private int numberOfParallelSubtasks;
     private final int attemptNumber;
 
     public TaskInfo(
@@ -150,5 +150,18 @@ public class TaskInfo {
      */
     public String getAllocationIDAsString() {
         return allocationIDAsString;
+    }
+
+    public void setNumberOfParallelSubtasks(int numberOfParallelSubtasks) {
+        this.numberOfParallelSubtasks = numberOfParallelSubtasks;
+        this.taskNameWithSubtasks =
+                taskName
+                        + " ("
+                        + (indexOfSubtask + 1)
+                        + '/'
+                        + numberOfParallelSubtasks
+                        + ')'
+                        + "#"
+                        + attemptNumber;
     }
 }

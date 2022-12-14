@@ -52,6 +52,8 @@ import org.apache.flink.runtime.io.network.NettyShuffleEnvironment;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.partition.PartitionProducerStateProvider;
+import org.apache.flink.runtime.io.network.partition.PipelinedResultPartition;
+import org.apache.flink.runtime.io.network.partition.PipelinedSubpartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
@@ -102,6 +104,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -173,7 +176,7 @@ public class Task
     private final TaskInfo taskInfo;
 
     /** The name of the task, including subtask indexes. */
-    private final String taskNameWithSubtask;
+    private String taskNameWithSubtask;
 
     /** The job-wide configuration object. */
     private final Configuration jobConfiguration;
@@ -341,6 +344,10 @@ public class Task
         Preconditions.checkArgument(0 <= subtaskIndex, "The subtask index must be positive.");
         Preconditions.checkArgument(0 <= attemptNumber, "The attempt number must be positive.");
 
+        if (subtaskIndex >= taskInformation.getNumberOfSubtasks()){
+            taskInformation.setNumberOfSubtasks(subtaskIndex + 1);
+        }
+
         this.taskInfo =
                 new TaskInfo(
                         taskInformation.getTaskName(),
@@ -449,6 +456,50 @@ public class Task
 
         // finally, create the executing thread, but do not start it
         executingThread = new Thread(TASK_THREADS_GROUP, this, taskNameWithSubtask);
+    }
+
+    public void updateSubtaskParallelism(int newParallelism){
+        taskInfo.setNumberOfParallelSubtasks(newParallelism);
+        this.taskNameWithSubtask = taskInfo.getTaskNameWithSubtasks();
+        for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters){
+            if(partitionWriter instanceof PipelinedResultPartition){
+                PipelinedResultPartition partition = (PipelinedResultPartition) partitionWriter;
+                //ResultPartition states
+                final String taskNameWithSubtaskAndId = taskNameWithSubtask + " (" + executionId + ')';
+                partition.owningTaskName = taskNameWithSubtaskAndId;
+            }
+        }
+    }
+
+    public void updateSubpartitionParallelism(int newParallelism){
+        //adjust partition writer
+        for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters){
+            if(partitionWriter instanceof PipelinedResultPartition){
+                PipelinedResultPartition partition = (PipelinedResultPartition) partitionWriter;
+                int oldParallelism = partition.getNumberOfSubpartitions();
+                int diff = newParallelism - oldParallelism;
+
+                //PipelinedResultPartition states
+                partition.allRecordsProcessedSubpartitions = Arrays.copyOf(partition.allRecordsProcessedSubpartitions, newParallelism);
+                partition.numNotAllRecordsProcessedSubpartitions += diff;
+                partition.consumedSubpartitions = Arrays.copyOf(partition.consumedSubpartitions, newParallelism);
+                partition.numberOfUsers += diff;
+
+                //BufferWritingResultPartition states
+                partition.subpartitions = Arrays.copyOf(partition.subpartitions, newParallelism);
+                for (int i = oldParallelism; i < newParallelism; i++) {
+                    partition.subpartitions[i] = new PipelinedSubpartition(i, 2, partition);
+                }
+                partition.unicastBufferBuilders = Arrays.copyOf(partition.unicastBufferBuilders, newParallelism);
+
+                //ResultPartition states
+                partition.numSubpartitions = newParallelism;
+            }
+        }
+
+        //adjust record writer
+        invokable.reloadRecordWriter();
+
     }
 
     // ------------------------------------------------------------------------

@@ -77,7 +77,7 @@ public abstract class ResultPartition implements ResultPartitionWriter {
 
     protected static final Logger LOG = LoggerFactory.getLogger(ResultPartition.class);
 
-    private final String owningTaskName;
+    public String owningTaskName;
 
     private final int partitionIndex;
 
@@ -88,7 +88,7 @@ public abstract class ResultPartition implements ResultPartitionWriter {
 
     protected final ResultPartitionManager partitionManager;
 
-    protected final int numSubpartitions;
+    public int numSubpartitions;
 
     private final int numTargetKeyGroups;
 

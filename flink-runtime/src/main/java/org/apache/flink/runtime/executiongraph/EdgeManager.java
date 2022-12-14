@@ -44,6 +44,19 @@ public class EdgeManager {
     private final Map<IntermediateResultPartitionID, List<ConsumedPartitionGroup>>
             consumedPartitionsById = new HashMap<>();
 
+    public void unregisterConsumedPartitions(ExecutionVertex[] executionVertices){
+        for(ExecutionVertex ev : executionVertices){
+            vertexConsumedPartitions.remove(ev.getID());
+        }
+    }
+
+    public void removeConnections(IntermediateResult ires){
+        for(IntermediateResultPartition partition : ires.getPartitions()){
+            partitionConsumers.remove(partition.getPartitionId());
+            consumedPartitionsById.remove(partition.getPartitionId());
+        }
+    }
+
     public void connectPartitionWithConsumerVertexGroup(
             IntermediateResultPartitionID resultPartitionId,
             ConsumerVertexGroup consumerVertexGroup) {

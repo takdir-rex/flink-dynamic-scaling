@@ -58,6 +58,11 @@ public class DefaultVertexParallelismStoreTest extends TestLogger {
         }
 
         @Override
+        public void setParallelism(int parallelism) {
+
+        }
+
+        @Override
         public int getMaxParallelism() {
             return 0;
         }

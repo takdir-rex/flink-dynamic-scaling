@@ -30,6 +30,7 @@ import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmanager.slots.TaskManagerGateway;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.operators.coordination.OperatorEvent;
+import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorGateway;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.SerializedValue;
@@ -58,6 +59,16 @@ public class RpcTaskManagerGateway implements TaskManagerGateway {
     @Override
     public CompletableFuture<Acknowledge> submitTask(TaskDeploymentDescriptor tdd, Time timeout) {
         return taskExecutorGateway.submitTask(tdd, jobMasterId, timeout);
+    }
+
+    public CompletableFuture<Acknowledge> updateSubtaskParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
+        return taskExecutorGateway.updateSubtaskParallelism(executionAttemptID, newParallelism, timeout);
+    }
+
+    public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
+        return taskExecutorGateway.updateSubpartitionParallelism(executionAttemptID, newParallelism, timeout);
     }
 
     @Override

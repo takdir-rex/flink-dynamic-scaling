@@ -71,6 +71,11 @@ public class MultipleRecordWriters<T extends IOReadableWritable>
     }
 
     @Override
+    public int getNumberOfRecordWriters() {
+        return recordWriters.size();
+    }
+
+    @Override
     public CompletableFuture<?> getAvailableFuture() {
         for (int i = 0; i < futures.length; i++) {
             futures[i] = recordWriters.get(i).getAvailableFuture();

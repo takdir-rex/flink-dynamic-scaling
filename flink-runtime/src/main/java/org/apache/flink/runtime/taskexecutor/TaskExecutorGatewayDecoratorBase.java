@@ -98,6 +98,18 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
     }
 
     @Override
+    public CompletableFuture<Acknowledge> updateSubtaskParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
+        return originalGateway.updateSubtaskParallelism(executionAttemptID, newParallelism, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
+        return originalGateway.updateSubpartitionParallelism(executionAttemptID, newParallelism, timeout);
+    }
+
+    @Override
     public CompletableFuture<Acknowledge> updatePartitions(
             ExecutionAttemptID executionAttemptID,
             Iterable<PartitionInfo> partitionInfos,

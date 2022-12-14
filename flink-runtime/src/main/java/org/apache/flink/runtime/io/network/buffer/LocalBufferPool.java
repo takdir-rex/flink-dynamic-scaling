@@ -29,6 +29,7 @@ import javax.annotation.concurrent.GuardedBy;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -110,9 +111,9 @@ class LocalBufferPool implements BufferPool {
     private final int maxBuffersPerChannel;
 
     @GuardedBy("availableMemorySegments")
-    private final int[] subpartitionBuffersCount;
+    private int[] subpartitionBuffersCount;
 
-    private final BufferRecycler[] subpartitionBufferRecyclers;
+    private BufferRecycler[] subpartitionBufferRecyclers;
 
     @GuardedBy("availableMemorySegments")
     private int unavailableSubpartitionsCount = 0;
@@ -330,6 +331,14 @@ class LocalBufferPool implements BufferPool {
             return null;
         }
 
+        int oldSize = subpartitionBufferRecyclers.length;
+        if(targetChannel >= oldSize){
+            subpartitionBufferRecyclers = Arrays.copyOf(subpartitionBufferRecyclers, targetChannel + 1);
+            for (int i = oldSize; i < targetChannel + 1; i++) {
+                subpartitionBufferRecyclers[i] = new SubpartitionBufferRecycler(i, this);
+            }
+        }
+
         if (targetChannel == UNKNOWN_CHANNEL) {
             return new BufferBuilder(memorySegment, this);
         } else {
@@ -358,6 +367,10 @@ class LocalBufferPool implements BufferPool {
         synchronized (availableMemorySegments) {
             if (isDestroyed) {
                 throw new IllegalStateException("Buffer pool is destroyed.");
+            }
+
+            if(targetChannel >= subpartitionBuffersCount.length){
+                subpartitionBuffersCount = Arrays.copyOf(subpartitionBuffersCount, targetChannel + 1);
             }
 
             // target channel over quota; do not return a segment

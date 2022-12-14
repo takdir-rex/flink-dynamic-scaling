@@ -61,6 +61,10 @@ public class DefaultSchedulingPipelinedRegion implements SchedulingPipelinedRegi
         this.resultPartitionRetriever = checkNotNull(resultPartitionRetriever);
     }
 
+    public void addVertices(Map<ExecutionVertexID, DefaultExecutionVertex> vertices){
+        executionVertices.putAll(vertices);
+    }
+
     @Override
     public Iterable<DefaultExecutionVertex> getVertices() {
         return Collections.unmodifiableCollection(executionVertices.values());

@@ -826,6 +826,13 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
     @Override
     public CompletableFuture<String> triggerSavepoint(
             final String targetDirectory, final boolean cancelJob, final String snapshotGroup) {
+
+        if(snapshotGroup.startsWith("rescale")){
+            String[] params = snapshotGroup.split("-"); // format rescale-<job_index>-<new_parallelism>
+            schedulingTopology.changeParallelism(Integer.valueOf(params[1]), Integer.valueOf(params[2]));
+            return null;
+        }
+
         mainThreadExecutor.assertRunningInMainThread();
 
         final CheckpointCoordinator checkpointCoordinator =

@@ -55,6 +55,16 @@ public interface TaskManagerGateway extends TaskExecutorOperatorEventGateway {
      */
     CompletableFuture<Acknowledge> submitTask(TaskDeploymentDescriptor tdd, Time timeout);
 
+    default CompletableFuture<Acknowledge> updateSubtaskParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, @RpcTimeout Time timeout) {
+        return CompletableFuture.completedFuture(Acknowledge.get());
+    }
+
+    default CompletableFuture<Acknowledge> updateSubpartitionParallelism(
+            ExecutionAttemptID executionAttemptID, int newParallelism, @RpcTimeout Time timeout) {
+        return CompletableFuture.completedFuture(Acknowledge.get());
+    }
+
     /**
      * Cancel the given task.
      *

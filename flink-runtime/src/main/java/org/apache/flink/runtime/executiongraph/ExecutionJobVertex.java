@@ -35,8 +35,10 @@ import org.apache.flink.runtime.blob.BlobWriter;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.execution.ExecutionState;
+import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -45,6 +47,8 @@ import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.operators.coordination.OperatorCoordinator;
 import org.apache.flink.runtime.operators.coordination.OperatorCoordinatorHolder;
 import org.apache.flink.runtime.scheduler.VertexParallelismInformation;
+import org.apache.flink.runtime.scheduler.strategy.ConsumedPartitionGroup;
+import org.apache.flink.runtime.scheduler.strategy.ConsumerVertexGroup;
 import org.apache.flink.types.Either;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.OptionalFailure;
@@ -89,7 +93,7 @@ public class ExecutionJobVertex
 
     private final JobVertex jobVertex;
 
-    private final ExecutionVertex[] taskVertices;
+    private final List<ExecutionVertex> taskVertices;
 
     private final IntermediateResult[] producedDataSets;
 
@@ -119,6 +123,8 @@ public class ExecutionJobVertex
 
     private InputSplitAssigner splitAssigner;
 
+    private final SubtaskAttemptNumberStore initialAttemptCounts;
+
     @VisibleForTesting
     public ExecutionJobVertex(
             InternalExecutionGraphAccessor graph,
@@ -139,6 +145,8 @@ public class ExecutionJobVertex
 
         this.parallelismInfo = parallelismInfo;
 
+        this.initialAttemptCounts = initialAttemptCounts;
+
         // verify that our parallelism is not higher than the maximum parallelism
         if (this.parallelismInfo.getParallelism() > this.parallelismInfo.getMaxParallelism()) {
             throw new JobException(
@@ -152,7 +160,7 @@ public class ExecutionJobVertex
         this.resourceProfile =
                 ResourceProfile.fromResourceSpec(jobVertex.getMinResources(), MemorySize.ZERO);
 
-        this.taskVertices = new ExecutionVertex[this.parallelismInfo.getParallelism()];
+        this.taskVertices = new ArrayList<>(this.parallelismInfo.getParallelism());
 
         this.inputs = new ArrayList<>(jobVertex.getInputs().size());
 
@@ -189,7 +197,7 @@ public class ExecutionJobVertex
                             maxPriorAttemptsHistoryLength,
                             initialAttemptCounts.getAttemptCount(i));
 
-            this.taskVertices[i] = vertex;
+            this.taskVertices.add(vertex);
         }
 
         // sanity check for the double referencing between intermediate result partitions and
@@ -252,6 +260,51 @@ public class ExecutionJobVertex
         }
     }
 
+    public void changeParallelism(int newParallelism){
+        int oldParallelism = this.parallelismInfo.getParallelism();
+        if(newParallelism == oldParallelism){
+            return;
+        }
+        this.jobVertex.setParallelism(newParallelism);
+        this.parallelismInfo.setParallelism(newParallelism);
+
+        if(newParallelism > oldParallelism){
+            for (int i = 0; i < newParallelism - oldParallelism; i++) {
+                for(IntermediateResult ires : this.producedDataSets){
+                    ires.increaseParallelism();
+                }
+                increaseParallelism();
+            }
+        } else {
+            for (int i = 0; i < oldParallelism - newParallelism; i++) {
+                for(IntermediateResult ires : this.producedDataSets){
+                    ires.decreaseParallelism();
+                }
+                decreaseParallelism();
+            }
+        }
+    }
+
+    private void increaseParallelism(){
+        ExecutionVertex lastVertex = this.taskVertices.get(this.taskVertices.size()-1);
+        int newSubTaskIndex = lastVertex.getParallelSubtaskIndex() + 1;
+        ExecutionVertex newExecutionVertex =
+                new ExecutionVertex(
+                        this,
+                        newSubTaskIndex,
+                        producedDataSets,
+                        lastVertex.getTimeout(),
+                        System.currentTimeMillis(),
+                        lastVertex.getPriorExecutions().getSizeLimit(),
+                        initialAttemptCounts.getAttemptCount(newSubTaskIndex));
+
+        this.taskVertices.add(newExecutionVertex);
+    }
+
+    private void decreaseParallelism(){
+        this.taskVertices.remove(taskVertices.size()-1);
+    }
+
     /**
      * Returns a list containing the ID pairs of all operators contained in this execution job
      * vertex.
@@ -309,7 +362,7 @@ public class ExecutionJobVertex
 
     @Override
     public ExecutionVertex[] getTaskVertices() {
-        return taskVertices;
+        return taskVertices.toArray(new ExecutionVertex[0]);
     }
 
     public IntermediateResult[] getProducedDataSets() {
@@ -378,7 +431,6 @@ public class ExecutionJobVertex
     }
 
     // ---------------------------------------------------------------------------------------------
-
     public void connectToPredecessors(
             Map<IntermediateDataSetID, IntermediateResult> intermediateDataSets)
             throws JobException {
@@ -427,6 +479,54 @@ public class ExecutionJobVertex
             }
 
             this.inputs.add(ires);
+
+            EdgeManagerBuildUtil.connectVertexToResult(this, ires, edge.getDistributionPattern());
+        }
+    }
+
+    public void reconnectToPredecessors(Map<IntermediateDataSetID, IntermediateResult> intermediateDataSets) throws JobException {
+        List<JobEdge> inputs = jobVertex.getInputs();
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                    String.format(
+                            "Reconnecting ExecutionJobVertex %s (%s) to %d predecessors.",
+                            jobVertex.getID(), jobVertex.getName(), inputs.size()));
+        }
+
+        for (int num = 0; num < inputs.size(); num++) {
+            JobEdge edge = inputs.get(num);
+
+            if (LOG.isDebugEnabled()) {
+                if (edge.getSource() == null) {
+                    LOG.debug(
+                            String.format(
+                                    "Reconnecting input %d of vertex %s (%s) to intermediate result referenced via ID %s.",
+                                    num,
+                                    jobVertex.getID(),
+                                    jobVertex.getName(),
+                                    edge.getSourceId()));
+                } else {
+                    LOG.debug(
+                            String.format(
+                                    "Reconnecting input %d of vertex %s (%s) to intermediate result referenced via predecessor %s (%s).",
+                                    num,
+                                    jobVertex.getID(),
+                                    jobVertex.getName(),
+                                    edge.getSource().getProducer().getID(),
+                                    edge.getSource().getProducer().getName()));
+                }
+            }
+
+            // fetch the intermediate result via ID. if it does not exist, then it either has not
+            // been created, or the order
+            // in which this method is called for the job vertices is not a topological order
+            IntermediateResult ires = intermediateDataSets.get(edge.getSourceId());
+            if (ires == null) {
+                throw new JobException(
+                        "Cannot reconnect this job graph to the previous graph. No previous intermediate result found for ID "
+                                + edge.getSourceId());
+            }
 
             EdgeManagerBuildUtil.connectVertexToResult(this, ires, edge.getDistributionPattern());
         }

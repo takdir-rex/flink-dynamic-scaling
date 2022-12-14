@@ -29,6 +29,7 @@ import org.apache.flink.runtime.jobmaster.slotpool.PhysicalSlotRequest;
 import org.apache.flink.runtime.jobmaster.slotpool.PhysicalSlotRequestBulkChecker;
 import org.apache.flink.runtime.scheduler.SharedSlotProfileRetriever.SharedSlotProfileRetrieverFactory;
 import org.apache.flink.runtime.scheduler.strategy.ExecutionVertexID;
+import org.apache.flink.runtime.scheduler.strategy.SchedulingExecutionVertex;
 import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.Preconditions;
 
@@ -92,6 +93,11 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
         this.allocationTimeout = checkNotNull(allocationTimeout);
         this.resourceProfileRetriever = checkNotNull(resourceProfileRetriever);
         this.sharedSlots = new IdentityHashMap<>();
+    }
+
+    public void requestNewSlotsAndDeploy(List<SchedulingExecutionVertex> vertices) {
+        LocalInputPreferredSlotSharingStrategy strategy = (LocalInputPreferredSlotSharingStrategy) slotSharingStrategy;
+        strategy.requestNewSlotsAndDeploy(vertices);
     }
 
     /**

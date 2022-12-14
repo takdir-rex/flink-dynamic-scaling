@@ -79,6 +79,11 @@ public class TestingSchedulingTopology implements SchedulingTopology {
     }
 
     @Override
+    public void changeParallelism(int jobVertexIndex, int newParallelism) {
+
+    }
+
+    @Override
     public Iterable<SchedulingPipelinedRegion> getAllPipelinedRegions() {
         return new HashSet<>(getVertexRegions().values());
     }

@@ -19,6 +19,7 @@
 
 package org.apache.flink.runtime.executiongraph.failover.flip1.partitionrelease;
 
+import org.apache.flink.runtime.executiongraph.ExecutionVertex;
 import org.apache.flink.runtime.scheduler.strategy.ConsumedPartitionGroup;
 import org.apache.flink.runtime.scheduler.strategy.ExecutionVertexID;
 import org.apache.flink.runtime.scheduler.strategy.SchedulingExecutionVertex;
@@ -61,6 +62,16 @@ public class RegionPartitionGroupReleaseStrategy implements PartitionGroupReleas
         this.consumerRegionGroupExecutionViewMaintainer =
                 new ConsumerRegionGroupExecutionViewMaintainer(
                         partitionGroupConsumerRegions.values());
+    }
+
+    public void addExecutionVertices(ExecutionVertexID sibling, List<ExecutionVertexID> vertexIds){
+        // initRegionExecutionViewByVertex()
+        PipelinedRegionExecutionView regionExecutionView = regionExecutionViewByVertex.get(sibling);
+        for(ExecutionVertexID vertexID : vertexIds){
+            regionExecutionView.vertexUnfinished(vertexID);
+            regionExecutionViewByVertex.put(vertexID, regionExecutionView);
+        }
+        // initPartitionGroupConsumerRegions() --> not supported for blocking partition yet
     }
 
     private void initRegionExecutionViewByVertex() {

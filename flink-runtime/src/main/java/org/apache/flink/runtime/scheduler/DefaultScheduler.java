@@ -46,8 +46,10 @@ import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
 import org.apache.flink.runtime.operators.coordination.OperatorCoordinatorHolder;
 import org.apache.flink.runtime.scheduler.exceptionhistory.FailureHandlingResultSnapshot;
 import org.apache.flink.runtime.scheduler.strategy.ExecutionVertexID;
+import org.apache.flink.runtime.scheduler.strategy.SchedulingExecutionVertex;
 import org.apache.flink.runtime.scheduler.strategy.SchedulingStrategy;
 import org.apache.flink.runtime.scheduler.strategy.SchedulingStrategyFactory;
+import org.apache.flink.runtime.scheduler.strategy.SchedulingStrategyUtils;
 import org.apache.flink.runtime.scheduler.strategy.SchedulingTopology;
 import org.apache.flink.runtime.shuffle.ShuffleMaster;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
@@ -407,6 +409,18 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 
         waitForAllSlotsAndDeploy(deploymentHandles);
     }
+
+    public void requestNewSlotsAndDeploy(List<SchedulingExecutionVertex> vertices) {
+        SlotSharingExecutionSlotAllocator slotAllocator = (SlotSharingExecutionSlotAllocator) executionSlotAllocator;
+        slotAllocator.requestNewSlotsAndDeploy(vertices);
+        final DeploymentOption deploymentOption = new DeploymentOption(false);
+        final List<ExecutionVertexDeploymentOption> vertexDeploymentOptions =
+                SchedulingStrategyUtils.createExecutionVertexDeploymentOptions(
+                        vertices.stream().map(SchedulingExecutionVertex::getId).collect(Collectors.toList()), id -> deploymentOption);
+        this.allocateSlotsAndDeploy(vertexDeploymentOptions);
+    }
+
+
 
     private void validateDeploymentOptions(
             final Collection<ExecutionVertexDeploymentOption> deploymentOptions) {

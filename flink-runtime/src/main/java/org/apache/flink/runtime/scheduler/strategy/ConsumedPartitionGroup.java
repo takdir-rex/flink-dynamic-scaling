@@ -103,4 +103,9 @@ public class ConsumedPartitionGroup implements Iterable<IntermediateResultPartit
     public boolean areAllPartitionsFinished() {
         return unfinishedPartitions.get() == 0;
     }
+
+    public void addPartition(IntermediateResultPartitionID intermediateResultPartitionID){
+        resultPartitions.add(intermediateResultPartitionID);
+        unfinishedPartitions.incrementAndGet();
+    }
 }

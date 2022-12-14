@@ -28,8 +28,10 @@ import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.scheduler.strategy.ConsumedPartitionGroup;
 import org.apache.flink.runtime.shuffle.ShuffleDescriptor;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -41,7 +43,7 @@ public class IntermediateResult {
 
     private final ExecutionJobVertex producer;
 
-    private final IntermediateResultPartition[] partitions;
+    private final List<IntermediateResultPartition> partitions;
 
     /**
      * Maps intermediate result partition IDs to a partition index. This is used for ID lookups of
@@ -51,7 +53,7 @@ public class IntermediateResult {
     private final HashMap<IntermediateResultPartitionID, Integer> partitionLookupHelper =
             new HashMap<>();
 
-    private final int numParallelProducers;
+    private int numParallelProducers;
 
     private int partitionsAssigned;
 
@@ -74,11 +76,13 @@ public class IntermediateResult {
         checkArgument(numParallelProducers >= 1);
         this.numParallelProducers = numParallelProducers;
 
-        this.partitions = new IntermediateResultPartition[numParallelProducers];
-
+        //initiate spaces for partitions array
+        this.partitions = new ArrayList<>(numParallelProducers);
+        for (int i = 0; i < numParallelProducers; i++) {
+            this.partitions.add(null);
+        }
         // we do not set the intermediate result partitions here, because we let them be initialized
-        // by
-        // the execution vertex that produces them
+        // by the execution vertex that produces them
 
         // assign a random connection index
         this.connectionIndex = (int) (Math.random() * Integer.MAX_VALUE);
@@ -89,17 +93,40 @@ public class IntermediateResult {
         this.shuffleDescriptorCache = new HashMap<>();
     }
 
+    public void increaseParallelism(){
+        this.numParallelProducers++;
+        this.partitions.add(null);
+
+    }
+
+    public void decreaseParallelism(){
+        this.numParallelProducers--;
+        //remove last partitions
+        int partitionNumber = this.partitions.size()-1;
+        IntermediateResultPartition removedPartition = this.partitions.remove(partitionNumber);
+        partitionLookupHelper.remove(removedPartition.getPartitionId());
+        partitionsAssigned--;
+    }
+
     public void setPartition(int partitionNumber, IntermediateResultPartition partition) {
-        if (partition == null || partitionNumber < 0 || partitionNumber >= numParallelProducers) {
+        if (partition == null || partitionNumber < 0) {
             throw new IllegalArgumentException();
         }
 
-        if (partitions[partitionNumber] != null) {
+        //dynamically expand the number of partitions (when change parallelism is called at runtime)
+        if(partitionNumber >= numParallelProducers){
+            numParallelProducers = partitionNumber + 1;
+            while (this.partitions.size() != numParallelProducers){
+                this.partitions.add(null);
+            }
+        }
+
+        if (partitions.get(partitionNumber) != null) {
             throw new IllegalStateException(
                     "Partition #" + partitionNumber + " has already been assigned.");
         }
 
-        partitions[partitionNumber] = partition;
+        partitions.set(partitionNumber, partition);
         partitionLookupHelper.put(partition.getPartitionId(), partitionNumber);
         partitionsAssigned++;
     }
@@ -113,7 +140,7 @@ public class IntermediateResult {
     }
 
     public IntermediateResultPartition[] getPartitions() {
-        return partitions;
+        return partitions.toArray(new IntermediateResultPartition[0]);
     }
 
     /**
@@ -135,7 +162,7 @@ public class IntermediateResult {
                 partitionLookupHelper.get(
                         checkNotNull(resultPartitionId, "IntermediateResultPartitionID"));
         if (partitionNumber != null) {
-            return partitions[partitionNumber];
+            return partitions.get(partitionNumber);
         } else {
             throw new IllegalArgumentException(
                     "Unknown intermediate result partition ID " + resultPartitionId);

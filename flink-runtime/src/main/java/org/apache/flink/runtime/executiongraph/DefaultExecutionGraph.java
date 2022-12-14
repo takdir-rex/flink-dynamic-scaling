@@ -52,10 +52,13 @@ import org.apache.flink.runtime.entrypoint.ClusterEntryPointExceptionUtils;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.failover.flip1.ResultPartitionAvailabilityChecker;
 import org.apache.flink.runtime.executiongraph.failover.flip1.partitionrelease.PartitionGroupReleaseStrategy;
+import org.apache.flink.runtime.executiongraph.failover.flip1.partitionrelease.RegionPartitionGroupReleaseStrategy;
 import org.apache.flink.runtime.io.network.partition.JobMasterPartitionTracker;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
+import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
@@ -822,6 +825,72 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
 
         partitionGroupReleaseStrategy =
                 partitionGroupReleaseStrategyFactory.createInstance(getSchedulingTopology());
+    }
+
+    public List<ExecutionVertex> changeParallelism(int jobVertexIndex, int newParallelism) {
+        ExecutionJobVertex executionJobVertex = this.tasks.get(verticesInCreationOrder.get(jobVertexIndex).getJobVertexId());
+        int oldParallelism = executionJobVertex.getParallelism();
+        //update parallelism and adjust the number of ExecutionVertex and IntermediateResultPartitions
+        executionJobVertex.changeParallelism(newParallelism);
+
+        //rebuild connections to predecessors and successors
+        //1. remove all previous connections to predecessor
+        ExecutionVertex[] executionVertices = executionJobVertex.getTaskVertices();
+        edgeManager.unregisterConsumedPartitions(executionVertices);
+        //2. remove all previous connections to successors
+        List<JobEdge> inputs = executionJobVertex.getJobVertex().getInputs();
+        for(JobEdge edge : inputs) {
+            IntermediateResult ires = this.intermediateResults.get(edge.getSourceId());
+            edgeManager.removeConnections(ires);
+        }
+        //3. reconnect to predecessor
+        try {
+            executionJobVertex.reconnectToPredecessors(this.intermediateResults);
+        } catch (JobException e) {
+            throw new RuntimeException(e);
+        }
+
+        this.numVerticesTotal += (newParallelism - oldParallelism);
+
+        List<ExecutionVertex> newExecutionVertices = new ArrayList<>(newParallelism-oldParallelism);
+        if(newParallelism > oldParallelism){
+            for (int i = oldParallelism; i < newParallelism; i++) {
+                ExecutionVertex newExecutionVertex = executionVertices[i];
+                executionVerticesById.put(newExecutionVertex.getID(), newExecutionVertex);
+                resultPartitionsById.putAll(newExecutionVertex.getProducedPartitions());
+                newExecutionVertices.add(newExecutionVertex);
+            }
+            //generate scheduling vertices and add them to the corresponding pipelined region according to their sibling
+            List<SchedulingExecutionVertex> newSchedulingVertices = executionTopology.addExecutionVertices(executionVertices[0].getID(), newExecutionVertices);
+
+            RegionPartitionGroupReleaseStrategy releaseStrategy = (RegionPartitionGroupReleaseStrategy) partitionGroupReleaseStrategy;
+            releaseStrategy.addExecutionVertices(executionVertices[0].getID(), newExecutionVertices.stream().map(ExecutionVertex::getID).collect(
+                    Collectors.toList()));
+        }
+
+        if(newParallelism < oldParallelism){
+
+        }
+
+        //4. Also do reconnection to the direct downstreams
+        for(IntermediateDataSet producedDataSet : executionJobVertex.getJobVertex().getProducedDataSets()) {
+            for(JobEdge outputEdge : producedDataSet.getConsumers()){
+                //un-link and re-link the downstream edges
+                ExecutionJobVertex downstreamEjv = this.tasks.get(outputEdge.getTarget().getID());
+                edgeManager.unregisterConsumedPartitions(downstreamEjv.getTaskVertices());
+                List<JobEdge> downstreamInput = downstreamEjv.getJobVertex().getInputs();
+                for(JobEdge edge : downstreamInput) {
+                    IntermediateResult ires = this.intermediateResults.get(edge.getSourceId());
+                    edgeManager.removeConnections(ires);
+                }
+                try {
+                    downstreamEjv.reconnectToPredecessors(this.intermediateResults);
+                } catch (JobException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return newExecutionVertices;
     }
 
     @Override

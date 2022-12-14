@@ -577,4 +577,12 @@ public class ExecutionVertex
     public ArchivedExecutionVertex archive() {
         return new ArchivedExecutionVertex(this);
     }
+
+    public Time getTimeout() {
+        return timeout;
+    }
+
+    public EvictingBoundedList<ArchivedExecution> getPriorExecutions() {
+        return priorExecutions;
+    }
 }

@@ -57,7 +57,7 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 
     protected final ResultPartitionWriter targetPartition;
 
-    protected final int numberOfChannels;
+    protected int numberOfChannels;
 
     protected final DataOutputSerializer serializer;
 
@@ -260,4 +260,9 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
     ResultPartitionWriter getTargetPartition() {
         return targetPartition;
     }
+
+    public int reloadNumberOfChannels(){
+        this.numberOfChannels = targetPartition.getNumberOfSubpartitions();
+        return numberOfChannels
+;    }
 }

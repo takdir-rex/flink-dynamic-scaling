@@ -31,7 +31,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** Utils for {@link SchedulingStrategy}. */
-class SchedulingStrategyUtils {
+public class SchedulingStrategyUtils {
 
     static Set<ExecutionVertexID> getAllVertexIdsFromTopology(final SchedulingTopology topology) {
         return IterableUtils.toStream(topology.getVertices())
@@ -62,7 +62,7 @@ class SchedulingStrategyUtils {
                 .collect(Collectors.toList());
     }
 
-    static List<ExecutionVertexDeploymentOption> createExecutionVertexDeploymentOptions(
+    public static List<ExecutionVertexDeploymentOption> createExecutionVertexDeploymentOptions(
             final Collection<ExecutionVertexID> verticesToDeploy,
             final Function<ExecutionVertexID, DeploymentOption> deploymentOptionRetriever) {
 

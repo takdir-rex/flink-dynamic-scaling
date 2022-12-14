@@ -63,14 +63,14 @@ public class PipelinedResultPartition extends BufferWritingResultPartition
      * user records.
      */
     @GuardedBy("lock")
-    private final boolean[] allRecordsProcessedSubpartitions;
+    public boolean[] allRecordsProcessedSubpartitions;
 
     /**
      * The total number of subpartitions whose user records have not been fully processed by the
      * downstream tasks yet.
      */
     @GuardedBy("lock")
-    private int numNotAllRecordsProcessedSubpartitions;
+    public int numNotAllRecordsProcessedSubpartitions;
 
     @GuardedBy("lock")
     private boolean hasNotifiedEndOfUserRecords;
@@ -86,7 +86,7 @@ public class PipelinedResultPartition extends BufferWritingResultPartition
      * releases idempotent.
      */
     @GuardedBy("lock")
-    private final boolean[] consumedSubpartitions;
+    public boolean[] consumedSubpartitions;
 
     /**
      * The total number of references to subpartitions of this result. The result partition can be
@@ -96,7 +96,7 @@ public class PipelinedResultPartition extends BufferWritingResultPartition
      * releases the partition as well.
      */
     @GuardedBy("lock")
-    private int numberOfUsers;
+    public int numberOfUsers;
 
     public PipelinedResultPartition(
             String owningTaskName,

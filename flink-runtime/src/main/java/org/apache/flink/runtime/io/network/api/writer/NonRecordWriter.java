@@ -38,6 +38,11 @@ public class NonRecordWriter<T extends IOReadableWritable> implements RecordWrit
     }
 
     @Override
+    public int getNumberOfRecordWriters() {
+        return 0;
+    }
+
+    @Override
     public CompletableFuture<?> getAvailableFuture() {
         throw new UnsupportedOperationException("No record writer instance.");
     }

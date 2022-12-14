@@ -1266,6 +1266,44 @@ public class Execution
         }
     }
 
+    public void updateSubtaskParallelism(int newParallelism) {
+        final LogicalSlot slot = assignedResource;
+
+        if (slot != null) {
+            final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
+            final ComponentMainThreadExecutor jobMasterMainThreadExecutor =
+                    getVertex().getExecutionGraphAccessor().getJobMasterMainThreadExecutor();
+
+            CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateSubtaskParallelism(attemptId, newParallelism, rpcTimeout);
+
+            resultFuture.whenComplete(
+                    (ack, failure) -> {
+                        if (failure != null) {
+                            fail(new Exception("Task could not be updated.", failure));
+                        }
+                    });
+        }
+    }
+
+    public void updateSubpartitionParallelism(int newParallelism) {
+        final LogicalSlot slot = assignedResource;
+
+        if (slot != null) {
+            final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
+            final ComponentMainThreadExecutor jobMasterMainThreadExecutor =
+                    getVertex().getExecutionGraphAccessor().getJobMasterMainThreadExecutor();
+
+            CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateSubpartitionParallelism(attemptId, newParallelism, rpcTimeout);
+
+            resultFuture.whenComplete(
+                    (ack, failure) -> {
+                        if (failure != null) {
+                            fail(new Exception("Task could not be updated.", failure));
+                        }
+                    });
+        }
+    }
+
     private void startTrackingPartitions(
             final ResourceID taskExecutorId,
             final Collection<ResultPartitionDeploymentDescriptor> partitions) {

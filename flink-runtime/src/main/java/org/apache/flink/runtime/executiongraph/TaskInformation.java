@@ -41,8 +41,7 @@ public class TaskInformation implements Serializable {
     /** Name of the task. */
     private final String taskName;
 
-    /** The number of subtasks for this operator. */
-    private final int numberOfSubtasks;
+    private int numberOfSubtasks;
 
     /** The maximum parallelism == number of key groups. */
     private final int maxNumberOfSubtasks;
@@ -95,8 +94,13 @@ public class TaskInformation implements Serializable {
         return taskName;
     }
 
+    /** The number of subtasks for this operator. */
     public int getNumberOfSubtasks() {
         return numberOfSubtasks;
+    }
+
+    public int setNumberOfSubtasks(int numberOfSubtasks) {
+        return this.numberOfSubtasks = numberOfSubtasks;
     }
 
     public int getMaxNumberOfSubtasks() {

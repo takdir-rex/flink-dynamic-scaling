@@ -207,6 +207,9 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
         List<ExecutionVertex> targetedSourceTasks = new ArrayList<>();
 
         for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
+            if(jobVertex.getJobVertex().isInputVertex() && Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)){
+                targetedSourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+            }
             if (Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)
                     || jobVertex.getJobVertex().isDownStreamOfSnapshotGroup(snapshotGroup)) {
                 targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));

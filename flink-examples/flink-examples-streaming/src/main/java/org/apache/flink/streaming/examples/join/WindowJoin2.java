@@ -68,8 +68,8 @@ public class WindowJoin2 {
                 "To customize example, use: WindowJoin [--windowSize <window-size-in-millis>] [--rate <elements-per-second>]");
 
         Configuration conf = new Configuration();
-        conf.setInteger("taskmanager.numberOfTaskSlots", 8);
-        conf.setInteger("local.number-taskmanager", 2); // for testing more than 1 task manager
+        conf.setInteger("taskmanager.numberOfTaskSlots", 12);
+        conf.setInteger("local.number-taskmanager", 1); // for testing more than 1 task manager
         final File checkpointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "checkpoint");
         final File savepointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "savepoint");
 
@@ -115,7 +115,7 @@ public class WindowJoin2 {
                         .name("WM salaries")
                         .snapshotGroup("snapshot-0");
 
-        DataStream<Tuple2<String, Integer>> gradesFordwarder = grades.map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+        DataStream<Tuple2<String, Integer>> gradesForwarder = grades.map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
 
             @Override
             public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
@@ -126,7 +126,7 @@ public class WindowJoin2 {
             }
         }).name("FW Grades").setParallelism(1).snapshotGroup("snapshot-0");
 
-        DataStream<Tuple2<String, Integer>> salariesFordwarder = salaries.map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+        DataStream<Tuple2<String, Integer>> salariesForwarder = salaries.map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
 
             @Override
             public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
@@ -137,12 +137,12 @@ public class WindowJoin2 {
         // run the actual window join program
         // for testability, this functionality is in a separate method.
         DataStream<Tuple3<String, Integer, Integer>> joinedStream =
-                runWindowJoin(gradesFordwarder, salariesFordwarder, windowSize);
+                runWindowJoin(gradesForwarder, salariesForwarder, windowSize);
 
         ((SingleOutputStreamOperator) joinedStream)
                 .uid("join")
                 .name("Join")
-                .snapshotGroup("snapshot-1").setParallelism(2);
+                .snapshotGroup("snapshot-1").setParallelism(1);
 
 //        DataStream<Tuple3<String, Integer, Integer>> joinedStream2 =
 //                runWindowJoin(grades, salaries, windowSize);
@@ -153,7 +153,7 @@ public class WindowJoin2 {
 //                .snapshotGroup("snapshot-2");
 
         // print the results with a single thread, rather than in parallel
-        joinedStream.addSink(new FailingSink<>()).setParallelism(1).uid("Sink").name("Sink").snapshotGroup("snapshot-1");
+        joinedStream.addSink(new DiscardingSink<>()).setParallelism(1).uid("Sink").name("Sink").snapshotGroup("snapshot-1");
 //        joinedStream2.addSink(new DiscardingSink<>()).setParallelism(1).uid("Sink2").name("Sink2").snapshotGroup("snapshot-2");
 
 //                System.out.println(env.getExecutionPlan());
