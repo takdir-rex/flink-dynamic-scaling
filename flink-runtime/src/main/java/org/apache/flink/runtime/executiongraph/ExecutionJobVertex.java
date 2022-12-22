@@ -283,6 +283,9 @@ public class ExecutionJobVertex
                 decreaseParallelism();
             }
         }
+
+        //make the existing blob key to null to overwrite stored task information in the blob server
+        this.taskInformationOrBlobKey = null;
     }
 
     private void increaseParallelism(){

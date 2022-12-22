@@ -99,10 +99,6 @@ public class TaskInformation implements Serializable {
         return numberOfSubtasks;
     }
 
-    public int setNumberOfSubtasks(int numberOfSubtasks) {
-        return this.numberOfSubtasks = numberOfSubtasks;
-    }
-
     public int getMaxNumberOfSubtasks() {
         return maxNumberOfSubtasks;
     }

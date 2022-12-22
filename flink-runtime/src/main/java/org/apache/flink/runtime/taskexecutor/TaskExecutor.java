@@ -707,7 +707,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
             if (tdd.getAttemptNumber() > 0){//after restarting
                 if(taskInformation.getTaskName().startsWith("Sink") && tdd.getSubtaskIndex() == 0){ //sibling
-                    taskInformation.setNumberOfSubtasks(2);
+//                    taskInformation.setNumberOfSubtasks(2);
                 }
                 if(taskInformation.getTaskName().equalsIgnoreCase("join")){ //upstream
                     for (ResultPartitionDeploymentDescriptor rpdd : tdd.getProducedPartitions()){

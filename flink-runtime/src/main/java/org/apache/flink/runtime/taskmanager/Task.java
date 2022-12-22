@@ -58,6 +58,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNo
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
+import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -344,10 +345,6 @@ public class Task
         Preconditions.checkArgument(0 <= subtaskIndex, "The subtask index must be positive.");
         Preconditions.checkArgument(0 <= attemptNumber, "The attempt number must be positive.");
 
-        if (subtaskIndex >= taskInformation.getNumberOfSubtasks()){
-            taskInformation.setNumberOfSubtasks(subtaskIndex + 1);
-        }
-
         this.taskInfo =
                 new TaskInfo(
                         taskInformation.getTaskName(),
@@ -499,7 +496,15 @@ public class Task
 
         //adjust record writer
         invokable.reloadRecordWriter();
+    }
 
+    public void updateInputChannels(int newParallelism){
+        for(InputGate inputGate: this.inputGates){
+            if(inputGate instanceof SingleInputGate){
+                SingleInputGate singleInputGate = (SingleInputGate) inputGate;
+//                singleInputGate.
+            }
+        }
     }
 
     // ------------------------------------------------------------------------
