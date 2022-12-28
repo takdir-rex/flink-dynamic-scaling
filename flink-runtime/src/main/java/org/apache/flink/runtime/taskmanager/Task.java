@@ -57,8 +57,10 @@ import org.apache.flink.runtime.io.network.partition.PipelinedSubpartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
+import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
+import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGateFactory;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -73,6 +75,7 @@ import org.apache.flink.runtime.metrics.groups.TaskMetricGroup;
 import org.apache.flink.runtime.operators.coordination.OperatorEvent;
 import org.apache.flink.runtime.operators.coordination.TaskNotRunningException;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.shuffle.ShuffleDescriptor;
 import org.apache.flink.runtime.shuffle.ShuffleEnvironment;
 import org.apache.flink.runtime.shuffle.ShuffleIOOwnerContext;
 import org.apache.flink.runtime.state.TaskStateManager;
@@ -305,6 +308,8 @@ public class Task
 
     private final JobVertex jobVertex;
 
+    private NettyShuffleEnvironment shuffleEnvironment = null;
+
     /**
      * <b>IMPORTANT:</b> This constructor may not start any work that would need to be undone in the
      * case of a failing task deployment.
@@ -443,6 +448,7 @@ public class Task
         }
 
         if (shuffleEnvironment instanceof NettyShuffleEnvironment) {
+            this.shuffleEnvironment = (NettyShuffleEnvironment) shuffleEnvironment;
             //noinspection deprecation
             ((NettyShuffleEnvironment) shuffleEnvironment)
                     .registerLegacyNetworkMetrics(
@@ -498,11 +504,17 @@ public class Task
         invokable.reloadRecordWriter();
     }
 
-    public void updateInputChannels(int newParallelism){
-        for(InputGate inputGate: this.inputGates){
-            if(inputGate instanceof SingleInputGate){
+    public void updateInputChannels(List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors){
+        for (int i = 0; i < this.inputGates.length; i++) {
+            InputGate inputGate = inputGates[i];
+            if(inputGate instanceof SingleInputGate) {
                 SingleInputGate singleInputGate = (SingleInputGate) inputGate;
-//                singleInputGate.
+                final InputGateDeploymentDescriptor igdd =
+                        inputGateDeploymentDescriptors.get(i);
+                ShuffleDescriptor[] shuffleDescriptors = igdd.getShuffleDescriptors();
+                if(shuffleDescriptors.length > singleInputGate.getNumberOfInputChannels()){
+                    singleInputGate.addInputChannels(shuffleEnvironment.createNewInputChannels(singleInputGate, shuffleDescriptors));
+                }
             }
         }
     }

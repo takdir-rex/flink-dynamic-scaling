@@ -36,6 +36,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionFactory;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionManager;
+import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGateID;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
@@ -275,6 +276,23 @@ public class NettyShuffleEnvironment
             registerInputMetrics(config.isNetworkDetailedMetrics(), networkInputGroup, inputGates);
             return Arrays.asList(inputGates);
         }
+    }
+
+    public InputChannel[] createNewInputChannels(SingleInputGate singleInputGate, ShuffleDescriptor[] shuffleDescriptors){
+        int numInputChanels = singleInputGate.getNumberOfInputChannels();
+        InputChannel[] newInputChannels = new InputChannel[shuffleDescriptors.length - numInputChanels];
+        SingleInputGateFactory.ChannelStatistics channelStatistics = new SingleInputGateFactory.ChannelStatistics();
+        synchronized (lock) {
+            for (int i = 0; i < newInputChannels.length; i++) {
+                newInputChannels[i] = singleInputGateFactory.createInputChannel(
+                        singleInputGate,
+                        numInputChanels + i,
+                        shuffleDescriptors[numInputChanels + i],
+                        channelStatistics,
+                        singleInputGate.getInputChannelMetrics());
+            }
+        }
+        return newInputChannels;
     }
 
     /**

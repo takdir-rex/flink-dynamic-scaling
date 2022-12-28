@@ -34,6 +34,7 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferDecompressor;
 import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.BufferProvider;
+import org.apache.flink.runtime.io.network.metrics.InputChannelMetrics;
 import org.apache.flink.runtime.io.network.partition.PartitionProducerStateProvider;
 import org.apache.flink.runtime.io.network.partition.PrioritizedDeque;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
@@ -136,7 +137,7 @@ public class SingleInputGate extends IndexedInputGate {
     private final int consumedSubpartitionIndex;
 
     /** The number of input channels (equivalent to the number of consumed partitions). */
-    private final int numberOfInputChannels;
+    private int numberOfInputChannels;
 
     /**
      * Input channels. There is a one input channel for each consumed intermediate result partition.
@@ -145,7 +146,7 @@ public class SingleInputGate extends IndexedInputGate {
     private final Map<IntermediateResultPartitionID, InputChannel> inputChannels;
 
     @GuardedBy("requestLock")
-    private final InputChannel[] channels;
+    private InputChannel[] channels;
 
     /** Channels, which notified this input gate about available data. */
     private final PrioritizedDeque<InputChannel> inputChannelsWithData = new PrioritizedDeque<>();
@@ -203,6 +204,8 @@ public class SingleInputGate extends IndexedInputGate {
      */
     private final MemorySegment unpooledSegment;
 
+    private final InputChannelMetrics inputChannelMetrics;
+
     public SingleInputGate(
             String owningTaskName,
             int gateIndex,
@@ -215,6 +218,22 @@ public class SingleInputGate extends IndexedInputGate {
             @Nullable BufferDecompressor bufferDecompressor,
             MemorySegmentProvider memorySegmentProvider,
             int segmentSize) {
+        this(owningTaskName, gateIndex, consumedResultId, consumedPartitionType, consumedSubpartitionIndex, numberOfInputChannels, partitionProducerStateProvider, bufferPoolFactory, bufferDecompressor, memorySegmentProvider, segmentSize, null);
+    }
+
+    public SingleInputGate(
+            String owningTaskName,
+            int gateIndex,
+            IntermediateDataSetID consumedResultId,
+            final ResultPartitionType consumedPartitionType,
+            int consumedSubpartitionIndex,
+            int numberOfInputChannels,
+            PartitionProducerStateProvider partitionProducerStateProvider,
+            SupplierWithException<BufferPool, IOException> bufferPoolFactory,
+            @Nullable BufferDecompressor bufferDecompressor,
+            MemorySegmentProvider memorySegmentProvider,
+            int segmentSize,
+            InputChannelMetrics inputChannelMetrics) {
 
         this.owningTaskName = checkNotNull(owningTaskName);
         Preconditions.checkArgument(0 <= gateIndex, "The gate index must be positive.");
@@ -246,6 +265,8 @@ public class SingleInputGate extends IndexedInputGate {
         this.closeFuture = new CompletableFuture<>();
 
         this.unpooledSegment = MemorySegmentFactory.allocateUnpooledSegment(segmentSize);
+
+        this.inputChannelMetrics = inputChannelMetrics;
     }
 
     protected PrioritizedDeque<InputChannel> getInputChannelsWithData() {
@@ -496,6 +517,24 @@ public class SingleInputGate extends IndexedInputGate {
                     numberOfUninitializedChannels++;
                 }
             }
+        }
+    }
+
+    public void addInputChannels(InputChannel... channels){
+        synchronized (requestLock) {
+            this.channels = Arrays.copyOf(this.channels, numberOfInputChannels + channels.length);
+            for (int i = 0; i < channels.length; i++) {
+                this.channels[numberOfInputChannels + i] = channels[i];
+                IntermediateResultPartitionID partitionId =
+                        channels[i].getPartitionId().getPartitionId();
+                if (inputChannels.put(partitionId, channels[i]) == null
+                        && channels[i] instanceof UnknownInputChannel) {
+
+                    numberOfUninitializedChannels++;
+                }
+            }
+            numberOfInputChannels += channels.length;
+            this.lastPrioritySequenceNumber = Arrays.copyOf(this.lastPrioritySequenceNumber, numberOfInputChannels);
         }
     }
 
@@ -1014,5 +1053,9 @@ public class SingleInputGate extends IndexedInputGate {
 
     public Map<IntermediateResultPartitionID, InputChannel> getInputChannels() {
         return inputChannels;
+    }
+
+    public InputChannelMetrics getInputChannelMetrics() {
+        return inputChannelMetrics;
     }
 }

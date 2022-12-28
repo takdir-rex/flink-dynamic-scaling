@@ -127,7 +127,8 @@ public class SingleInputGateFactory {
                         bufferPoolFactory,
                         bufferDecompressor,
                         networkBufferPool,
-                        networkBufferSize);
+                        networkBufferSize,
+                        metrics);
 
         createInputChannels(owningTaskName, igdd, inputGate, metrics);
         return inputGate;
@@ -160,7 +161,7 @@ public class SingleInputGateFactory {
                 channelStatistics);
     }
 
-    private InputChannel createInputChannel(
+    public InputChannel createInputChannel(
             SingleInputGate inputGate,
             int index,
             ShuffleDescriptor shuffleDescriptor,
@@ -239,7 +240,7 @@ public class SingleInputGateFactory {
     }
 
     /** Statistics of input channels. */
-    protected static class ChannelStatistics {
+    public static class ChannelStatistics {
         int numLocalChannels;
         int numRemoteChannels;
         int numUnknownChannels;

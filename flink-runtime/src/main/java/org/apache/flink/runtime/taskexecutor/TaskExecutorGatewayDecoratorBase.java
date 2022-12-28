@@ -26,6 +26,7 @@ import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
+import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.PartitionInfo;
@@ -45,6 +46,7 @@ import org.apache.flink.types.SerializableOptional;
 import org.apache.flink.util.SerializedValue;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -115,6 +117,12 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
             Iterable<PartitionInfo> partitionInfos,
             Time timeout) {
         return originalGateway.updatePartitions(executionAttemptID, partitionInfos, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> updateInputChannels(
+            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, Time timeout) {
+        return originalGateway.updateInputChannels(executionAttemptID, inputGateDeploymentDescriptors, timeout);
     }
 
     @Override

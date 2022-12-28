@@ -27,7 +27,9 @@ import org.apache.flink.runtime.executiongraph.IntermediateResult;
 import org.apache.flink.runtime.executiongraph.IntermediateResultPartition;
 import org.apache.flink.runtime.executiongraph.failover.flip1.SchedulingPipelinedRegionComputeUtil;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
+import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.topology.DefaultLogicalPipelinedRegion;
@@ -164,6 +166,17 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                 vertex.getCurrentExecutionAttempt().updateSubpartitionParallelism(newParallelism);
             }
         }
+
+        //also update input channels of their downstreams
+        for(IntermediateDataSet producedDataSet : ejv.getJobVertex().getProducedDataSets()) {
+            for(JobEdge outputEdge : producedDataSet.getConsumers()){
+                ExecutionJobVertex downstreamEjv = executionGraph.getJobVertex(outputEdge.getTarget().getID());
+                for(ExecutionVertex vertex : downstreamEjv.getTaskVertices()){
+                    vertex.getCurrentExecutionAttempt().updateInputChannels();
+                }
+            }
+        }
+
 
         scheduler.requestNewSlotsAndDeploy(schedulingExecutionVertices);
     }

@@ -32,6 +32,7 @@ import org.apache.flink.runtime.checkpoint.JobManagerTaskRestore;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.concurrent.ComponentMainThreadExecutor;
+import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.ResultPartitionDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptorFactory;
@@ -1271,8 +1272,6 @@ public class Execution
 
         if (slot != null) {
             final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
-            final ComponentMainThreadExecutor jobMasterMainThreadExecutor =
-                    getVertex().getExecutionGraphAccessor().getJobMasterMainThreadExecutor();
 
             CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateSubtaskParallelism(attemptId, newParallelism, rpcTimeout);
 
@@ -1290,8 +1289,6 @@ public class Execution
 
         if (slot != null) {
             final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
-            final ComponentMainThreadExecutor jobMasterMainThreadExecutor =
-                    getVertex().getExecutionGraphAccessor().getJobMasterMainThreadExecutor();
 
             CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateSubpartitionParallelism(attemptId, newParallelism, rpcTimeout);
 
@@ -1301,6 +1298,30 @@ public class Execution
                             fail(new Exception("Task could not be updated.", failure));
                         }
                     });
+        }
+    }
+
+    public void updateInputChannels() {
+        assertRunningInJobMasterMainThread();
+        final LogicalSlot slot = assignedResource;
+        if (slot != null) {
+            LOG.info(
+                    "Updating input channels of task {} (attempt #{}) with attempt id {} to {} with allocation id {}",
+                    vertex.getTaskNameWithSubtaskIndex(),
+                    attemptNumber,
+                    vertex.getCurrentExecutionAttempt().getAttemptId(),
+                    getAssignedResourceLocation(),
+                    slot.getAllocationId());
+            try {
+                final List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors =
+                        TaskDeploymentDescriptorFactory.fromExecutionVertex(vertex, attemptNumber)
+                                .createInputGateDeploymentDescriptors();
+
+                final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
+
+            } catch (Throwable t) {
+                markFailed(t);
+            }
         }
     }
 

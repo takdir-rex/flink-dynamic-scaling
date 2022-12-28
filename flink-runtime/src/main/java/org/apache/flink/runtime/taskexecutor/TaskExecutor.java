@@ -37,6 +37,7 @@ import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
+import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.ResultPartitionDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.entrypoint.ClusterInformation;
@@ -815,6 +816,31 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             try {
 
                 task.updateSubpartitionParallelism(newParallelism);
+
+                return CompletableFuture.completedFuture(Acknowledge.get());
+            } catch (Throwable t) {
+                return FutureUtils.completedExceptionally(
+                        new TaskException(
+                                "Cannot update task for execution " + executionAttemptID + '.', t));
+            }
+        } else {
+            final String message =
+                    "Cannot find task to be updated for execution " + executionAttemptID + '.';
+
+            log.debug(message);
+            return FutureUtils.completedExceptionally(new TaskException(message));
+        }
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> updateInputChannels(
+            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, Time timeout) {
+        final Task task = taskSlotTable.getTask(executionAttemptID);
+
+        if (task != null) {
+            try {
+
+                task.updateInputChannels(inputGateDeploymentDescriptors);
 
                 return CompletableFuture.completedFuture(Acknowledge.get());
             } catch (Throwable t) {

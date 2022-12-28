@@ -833,17 +833,16 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
         //update parallelism and adjust the number of ExecutionVertex and IntermediateResultPartitions
         executionJobVertex.changeParallelism(newParallelism);
 
-        //rebuild connections to predecessors and successors
-        //1. remove all previous connections to predecessor
+        //rebuild connections to upstreams
+        //1. remove all previous connections to upstreams
         ExecutionVertex[] executionVertices = executionJobVertex.getTaskVertices();
         edgeManager.unregisterConsumedPartitions(executionVertices);
-        //2. remove all previous connections to successors
         List<JobEdge> inputs = executionJobVertex.getJobVertex().getInputs();
         for(JobEdge edge : inputs) {
             IntermediateResult ires = this.intermediateResults.get(edge.getSourceId());
             edgeManager.removeConnections(ires);
         }
-        //3. reconnect to predecessor
+        //2. reconnect to upstreams
         try {
             executionJobVertex.reconnectToPredecessors(this.intermediateResults);
         } catch (JobException e) {
@@ -872,7 +871,7 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
 
         }
 
-        //4. Also do reconnection to the direct downstreams
+        //3. Also do reconnection to the direct downstreams
         for(IntermediateDataSet producedDataSet : executionJobVertex.getJobVertex().getProducedDataSets()) {
             for(JobEdge outputEdge : producedDataSet.getConsumers()){
                 //un-link and re-link the downstream edges

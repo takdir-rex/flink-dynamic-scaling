@@ -22,6 +22,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
+import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.PartitionInfo;
@@ -36,6 +37,7 @@ import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.SerializedValue;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -69,6 +71,11 @@ public class RpcTaskManagerGateway implements TaskManagerGateway {
     public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
             ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
         return taskExecutorGateway.updateSubpartitionParallelism(executionAttemptID, newParallelism, timeout);
+    }
+
+    public CompletableFuture<Acknowledge> updateInputChannels(
+            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, Time timeout) {
+        return taskExecutorGateway.updateInputChannels(executionAttemptID, inputGateDeploymentDescriptors, timeout);
     }
 
     @Override

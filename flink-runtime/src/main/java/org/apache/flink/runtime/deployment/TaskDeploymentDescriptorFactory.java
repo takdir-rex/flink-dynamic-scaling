@@ -114,7 +114,7 @@ public class TaskDeploymentDescriptorFactory {
                 createInputGateDeploymentDescriptors());
     }
 
-    private List<InputGateDeploymentDescriptor> createInputGateDeploymentDescriptors()
+    public List<InputGateDeploymentDescriptor> createInputGateDeploymentDescriptors()
             throws IOException {
         List<InputGateDeploymentDescriptor> inputGates =
                 new ArrayList<>(consumedPartitionGroups.size());
