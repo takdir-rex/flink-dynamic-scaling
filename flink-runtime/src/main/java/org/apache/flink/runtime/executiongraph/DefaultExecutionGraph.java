@@ -452,7 +452,8 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
                         failureManager,
                         createCheckpointPlanCalculator(
                                 chkConfig.isEnableCheckpointsAfterTasksFinish()),
-                        new ExecutionAttemptMappingProvider(getAllExecutionVertices()));
+                        new ExecutionAttemptMappingProvider(getAllExecutionVertices()),
+                        executionTopology);
 
         // register the master hooks on the checkpoint coordinator
         for (MasterTriggerRestoreHook<?> hook : masterHooks) {
@@ -827,8 +828,12 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
                 partitionGroupReleaseStrategyFactory.createInstance(getSchedulingTopology());
     }
 
-    public List<ExecutionVertex> changeParallelism(int jobVertexIndex, int newParallelism) {
-        ExecutionJobVertex executionJobVertex = this.tasks.get(verticesInCreationOrder.get(jobVertexIndex).getJobVertexId());
+    public ExecutionJobVertex getJobVertex(int jobVertexIndex){
+        return this.tasks.get(verticesInCreationOrder.get(jobVertexIndex).getJobVertexId());
+    }
+
+    public List<ExecutionVertex> changeParallelism(String rescaledJobIdHexString, int newParallelism) {
+        ExecutionJobVertex executionJobVertex = this.tasks.get(JobVertexID.fromHexString(rescaledJobIdHexString));
         int oldParallelism = executionJobVertex.getParallelism();
         //update parallelism and adjust the number of ExecutionVertex and IntermediateResultPartitions
         executionJobVertex.changeParallelism(newParallelism);

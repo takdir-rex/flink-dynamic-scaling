@@ -17,6 +17,8 @@
 
 package org.apache.flink.streaming.runtime.partitioner;
 
+import com.esotericsoftware.minlog.Log;
+
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.runtime.io.network.api.writer.SubtaskStateMapper;
@@ -24,6 +26,9 @@ import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.util.Preconditions;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
@@ -35,6 +40,8 @@ import java.util.Objects;
 @Internal
 public class KeyGroupStreamPartitioner<T, K> extends StreamPartitioner<T>
         implements ConfigurableStreamPartitioner {
+
+    protected final Logger log = LoggerFactory.getLogger(getClass());
     private static final long serialVersionUID = 1L;
 
     private final KeySelector<T, K> keySelector;
@@ -60,8 +67,12 @@ public class KeyGroupStreamPartitioner<T, K> extends StreamPartitioner<T>
             throw new RuntimeException(
                     "Could not extract key from " + record.getInstance().getValue(), e);
         }
-        return KeyGroupRangeAssignment.assignKeyToParallelOperator(
+        int ch = KeyGroupRangeAssignment.assignKeyToParallelOperator(
                 key, maxParallelism, numberOfChannels);
+        if(numberOfChannels >= 3){
+            log.debug("### key {}, kg {}, ch {}", key, KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism), ch);
+        }
+        return ch;
     }
 
     @Override

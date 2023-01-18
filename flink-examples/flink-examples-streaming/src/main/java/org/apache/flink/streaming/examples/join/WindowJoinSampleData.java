@@ -62,7 +62,6 @@ public class WindowJoinSampleData {
             return env.fromCollection(
                             new ThrottledIterator<>(new GradeSource(), rate),
                             TypeInformation.of(new TypeHint<Tuple2<String, Integer>>() {}))
-                    .uid("S1")
                     .name("Souce grades");
         }
     }
@@ -92,7 +91,6 @@ public class WindowJoinSampleData {
             return env.fromCollection(
                             new ThrottledIterator<>(new SalarySource(), rate),
                             TypeInformation.of(new TypeHint<Tuple2<String, Integer>>() {}))
-                    .uid("S2")
                     .name("Source salaries");
         }
     }

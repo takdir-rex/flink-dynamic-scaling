@@ -63,6 +63,8 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
 
     private final boolean allowCheckpointsAfterTasksFinished;
 
+    private final Iterable<ExecutionJobVertex> jobVerticesInTopologyOrderIterable;
+
     public DefaultCheckpointPlanCalculator(
             JobID jobId,
             CheckpointPlanCalculatorContext context,
@@ -74,15 +76,7 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
         this.allowCheckpointsAfterTasksFinished = allowCheckpointsAfterTasksFinished;
 
         checkNotNull(jobVerticesInTopologyOrderIterable);
-        jobVerticesInTopologyOrderIterable.forEach(
-                jobVertex -> {
-                    jobVerticesInTopologyOrder.add(jobVertex);
-                    allTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
-
-                    if (jobVertex.getJobVertex().isInputVertex()) {
-                        sourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
-                    }
-                });
+        this.jobVerticesInTopologyOrderIterable = jobVerticesInTopologyOrderIterable;
     }
 
     @Override
@@ -149,6 +143,17 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
      * @throws CheckpointException if some tasks do not have attached Execution.
      */
     private void checkAllTasksInitiated() throws CheckpointException {
+        jobVerticesInTopologyOrder.clear();
+        sourceTasks.clear();
+        jobVerticesInTopologyOrderIterable.forEach(
+            jobVertex -> {
+                jobVerticesInTopologyOrder.add(jobVertex);
+                allTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+
+                if (jobVertex.getJobVertex().isInputVertex()) {
+                    sourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                }
+            });
         for (ExecutionVertex task : allTasks) {
             if (task.getCurrentExecutionAttempt() == null) {
                 throw new CheckpointException(

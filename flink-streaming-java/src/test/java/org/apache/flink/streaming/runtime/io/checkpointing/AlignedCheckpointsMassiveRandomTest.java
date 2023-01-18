@@ -74,6 +74,7 @@ public class AlignedCheckpointsMassiveRandomTest {
                             SingleCheckpointBarrierHandler.aligned(
                                     "Testing: No task associated",
                                     new DummyCheckpointInvokable(),
+                                    null,
                                     SystemClock.getInstance(),
                                     myIG.getNumberOfInputChannels(),
                                     (callable, duration) -> () -> {},

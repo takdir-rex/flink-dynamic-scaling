@@ -53,8 +53,11 @@ public class EdgeManager {
     public void removeConnections(IntermediateResult ires){
         for(IntermediateResultPartition partition : ires.getPartitions()){
             partitionConsumers.remove(partition.getPartitionId());
-            for(ConsumedPartitionGroup consumedPartitionGroup : consumedPartitionsById.remove(partition.getPartitionId())){
-                ires.clearCachedInformationForPartitionGroup(consumedPartitionGroup);
+            List<ConsumedPartitionGroup> consumedPartitionGroups = consumedPartitionsById.remove(partition.getPartitionId());
+            if(consumedPartitionGroups != null){
+                for(ConsumedPartitionGroup cpGroup : consumedPartitionGroups){
+                    ires.clearCachedInformationForPartitionGroup(cpGroup);
+                }
             }
         }
     }

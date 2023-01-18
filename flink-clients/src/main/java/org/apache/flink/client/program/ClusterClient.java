@@ -156,6 +156,10 @@ public interface ClusterClient<T> extends AutoCloseable {
             final boolean advanceToEndOfEventTime,
             @Nullable final String savepointDirectory);
 
+    default CompletableFuture<Acknowledge> rescale(JobID jobId, int jobVertexIndex, int newParallelism){
+        return CompletableFuture.completedFuture(Acknowledge.get());
+    }
+
     /**
      * Triggers a savepoint for the job identified by the job id. The savepoint will be written to
      * the given savepoint directory, or {@link

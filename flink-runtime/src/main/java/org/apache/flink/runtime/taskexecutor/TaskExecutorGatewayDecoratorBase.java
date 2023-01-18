@@ -126,6 +126,12 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
     }
 
     @Override
+    public CompletableFuture<Acknowledge> updateRecordWriters(
+            ExecutionAttemptID executionAttemptID, Time timeout) {
+        return originalGateway.updateRecordWriters(executionAttemptID, timeout);
+    }
+
+    @Override
     public void releaseOrPromotePartitions(
             JobID jobId,
             Set<ResultPartitionID> partitionToRelease,

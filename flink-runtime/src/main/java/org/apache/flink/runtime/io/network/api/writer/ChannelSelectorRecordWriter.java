@@ -53,12 +53,7 @@ public final class ChannelSelectorRecordWriter<T extends IOReadableWritable>
 
     @Override
     public void emit(T record) throws IOException {
-        int ch = channelSelector.selectChannel(record);
-        if(taskName.contains("Join")){
-//            System.out.println("#### " + taskName + " --> " + ch);
-//            System.out.println("#### " + numberOfChannels);
-        }
-        emit(record, ch);
+        emit(record, channelSelector.selectChannel(record));
     }
 
     @Override

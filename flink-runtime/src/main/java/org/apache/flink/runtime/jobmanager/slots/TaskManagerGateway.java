@@ -72,6 +72,11 @@ public interface TaskManagerGateway extends TaskExecutorOperatorEventGateway {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 
+    default CompletableFuture<Acknowledge> updateRecordWriters(
+            ExecutionAttemptID executionAttemptID, @RpcTimeout Time timeout) {
+        return CompletableFuture.completedFuture(Acknowledge.get());
+    }
+
     /**
      * Cancel the given task.
      *

@@ -677,6 +677,20 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
     }
 
     @Override
+    public CompletableFuture<Acknowledge> rescale(
+            final JobID jobId,
+            final int jobVertexIndex,
+            final int newParallelism,
+            final Time timeout) {
+
+        return performOperationOnJobMasterGateway(
+                jobId,
+                gateway ->
+                        gateway.rescale(
+                                jobVertexIndex, newParallelism, timeout));
+    }
+
+    @Override
     public CompletableFuture<String> triggerSavepoint(
             final JobID jobId,
             final String targetDirectory,

@@ -98,6 +98,9 @@ public interface TaskExecutorGateway
     CompletableFuture<Acknowledge> updateInputChannels(
             ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, @RpcTimeout Time timeout);
 
+    CompletableFuture<Acknowledge> updateRecordWriters(
+            ExecutionAttemptID executionAttemptID, @RpcTimeout Time timeout);
+
     /**
      * Update the task where the given partitions can be found.
      *

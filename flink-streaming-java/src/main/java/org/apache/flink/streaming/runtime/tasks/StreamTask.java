@@ -50,7 +50,9 @@ import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.api.writer.SingleRecordWriter;
 import org.apache.flink.runtime.io.network.partition.ChannelStateHolder;
 import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
+import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
+import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointableTask;
 import org.apache.flink.runtime.jobgraph.tasks.CoordinatedTask;
@@ -67,6 +69,7 @@ import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.state.StateBackendLoader;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.runtime.taskmanager.DispatcherThreadFactory;
+import org.apache.flink.runtime.taskmanager.InputGateWithMetrics;
 import org.apache.flink.runtime.taskmanager.Task;
 import org.apache.flink.runtime.throughput.ThroughputCalculator;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -184,10 +187,10 @@ import static org.apache.flink.util.concurrent.FutureUtils.assertNoException;
 @Internal
 public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         implements TaskInvokable,
-                CheckpointableTask,
-                CoordinatedTask,
-                AsyncExceptionHandler,
-                ContainingTaskDetails {
+        CheckpointableTask,
+        CoordinatedTask,
+        AsyncExceptionHandler,
+        ContainingTaskDetails {
 
     /** The thread group that holds all trigger timer threads. */
     public static final ThreadGroup TRIGGER_THREAD_GROUP = new ThreadGroup("Triggers");
@@ -210,7 +213,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     private final StreamTaskActionExecutor actionExecutor;
 
     /** The input processor. Initialized in {@link #init()} method. */
-    @Nullable protected StreamInputProcessor inputProcessor;
+    @Nullable
+    protected StreamInputProcessor inputProcessor;
 
     /** the main operator that consumes the input streams of this task. */
     protected OP mainOperator;
@@ -307,6 +311,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     @GuardedBy("shouldInterruptOnCancelLock")
     private boolean shouldInterruptOnCancel = true;
 
+    private long currentRescalingCheckpointId = -1;
+
     // ------------------------------------------------------------------------
 
     /**
@@ -350,9 +356,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      * @param environment The task environment for this task.
      * @param timerService Optionally, a specific timer service to use.
      * @param uncaughtExceptionHandler to handle uncaught exceptions in the async operations thread
-     *     pool
+     *         pool
      * @param actionExecutor a mean to wrap all actions performed by this task thread. Currently,
-     *     only SynchronizedActionExecutor can be used to preserve locking semantics.
+     *         only SynchronizedActionExecutor can be used to preserve locking semantics.
      */
     protected StreamTask(
             Environment environment,
@@ -486,19 +492,21 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     protected abstract void init() throws Exception;
 
-    protected void cancelTask() throws Exception {}
+    protected void cancelTask() throws Exception {
+    }
 
     /**
      * This method implements the default action of the task (e.g. processing one event from the
      * input). Implementations should (in general) be non-blocking.
      *
      * @param controller controller object for collaborative interaction between the action and the
-     *     stream task.
+     *         stream task.
+     *
      * @throws Exception on any problems in the action.
      */
     protected void processInput(MailboxDefaultAction.Controller controller) throws Exception {
         DataInputStatus status = inputProcessor.processInput();
-        String opName = getName();
+//        String opName = getName();
 //        if(opName.contains("Sink (1")){
 //            System.out.println("#### " + getName() + " " + status);
 //        }
@@ -568,7 +576,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         checkState(
                 syncSavepointWithoutDrain == null
                         && (syncSavepointWithDrain == null
-                                || (isDrain && syncSavepointWithDrain == checkpointId)),
+                        || (isDrain && syncSavepointWithDrain == checkpointId)),
                 "at most one stop-with-savepoint checkpoint at a time is allowed");
         if (isDrain) {
             if (syncSavepointWithDrain == null) {
@@ -619,7 +627,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      *
      * <p>For tasks other than the source task, this method does nothing.
      */
-    protected void advanceToEndOfEventTime() throws Exception {}
+    protected void advanceToEndOfEventTime() throws Exception {
+    }
 
     /**
      * Instructs the task to go through its normal termination routine, i.e. exit the run-loop and
@@ -630,7 +639,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      *
      * <p>For tasks other than the source task, this method does nothing.
      */
-    protected void finishTask() throws Exception {}
+    protected void finishTask() throws Exception {
+    }
 
     // ------------------------------------------------------------------------
     //  Core work methods of the Stream Task
@@ -889,8 +899,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     private boolean areCheckpointsWithFinishedTasksEnabled() {
         return configuration
-                        .getConfiguration()
-                        .get(ExecutionCheckpointingOptions.ENABLE_CHECKPOINTS_AFTER_TASKS_FINISH)
+                .getConfiguration()
+                .get(ExecutionCheckpointingOptions.ENABLE_CHECKPOINTS_AFTER_TASKS_FINISH)
                 && configuration.isCheckpointingEnabled();
     }
 
@@ -1154,8 +1164,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             latestAsyncCheckpointStartDelayNanos =
                     1_000_000
                             * Math.max(
-                                    0,
-                                    System.currentTimeMillis() - checkpointMetaData.getTimestamp());
+                            0,
+                            System.currentTimeMillis() - checkpointMetaData.getTimestamp());
 
             // No alignment if we inject a checkpoint
             CheckpointMetricsBuilder checkpointMetrics =
@@ -1261,42 +1271,58 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             CheckpointOptions checkpointOptions,
             CheckpointMetricsBuilder checkpointMetrics)
             throws IOException {
-
-        // (cp.Snap!=null && !isDirectUpstream(cp.snap) && !snapEqual(cp.snap) &
-        // !idDownStreamOf(cp.snap))
-        if (!Objects.isNull(checkpointOptions.getSnapshotGroup())
-                && !environment
-                        .getJobVertex()
-                        .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())
-                && !Objects.equals(
-                        environment.getJobVertex().getSnapshotGroup(),
-                        checkpointOptions.getSnapshotGroup())
-                && !environment
-                        .getJobVertex()
-                        .isDownStreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) {
-            return;
-        }
-
         FlinkSecurityManager.monitorUserSystemExitForCurrentThread();
         try {
-            if (environment
-                    .getJobVertex().isInputVertex() && Objects.equals(
-                    environment.getJobVertex().getSnapshotGroup(),
-                    checkpointOptions.getSnapshotGroup())) { //source is included in snapshot group
+            if(checkpointOptions.getBlockedJobIdsForRescaling().contains(environment.getJobVertex().getID().toHexString())){
+                this.currentRescalingCheckpointId = checkpointMetaData.getCheckpointId();
+            }
+            if (Objects.isNull(checkpointOptions.getSnapshotGroup())
+                    || checkpointOptions.isRescaling()) {
                 if (performCheckpoint(checkpointMetaData, checkpointOptions, checkpointMetrics)) {
                     if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
                         runSynchronousSavepointMailboxLoop();
                     }
                 }
-            } else if (environment
+            } else if (!environment
                     .getJobVertex()
-                    .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) { //a direct upstream
-                // only send checkpoint barrier without recording own snapshot
-                sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
+                    .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())
+                    && !Objects.equals(
+                    environment.getJobVertex().getSnapshotGroup(),
+                    checkpointOptions.getSnapshotGroup())
+                    && !environment
+                    .getJobVertex()
+                    .isDownStreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) {
+                // (cp.Snap!=null && !isDirectUpstream(cp.snap) && !snapEqual(cp.snap) &
+                // !idDownStreamOf(cp.snap))
+
+                //Do Nothing
             } else {
-                if (performCheckpoint(checkpointMetaData, checkpointOptions, checkpointMetrics)) {
-                    if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
-                        runSynchronousSavepointMailboxLoop();
+                if (environment
+                        .getJobVertex().isInputVertex() && Objects.equals(
+                        environment.getJobVertex().getSnapshotGroup(),
+                        checkpointOptions.getSnapshotGroup())) { //source is included in snapshot group
+                    if (performCheckpoint(
+                            checkpointMetaData,
+                            checkpointOptions,
+                            checkpointMetrics)) {
+                        if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
+                            runSynchronousSavepointMailboxLoop();
+                        }
+                    }
+                } else if (environment
+                        .getJobVertex()
+                        .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) { //a direct upstream
+                    // only send checkpoint barrier without recording own snapshot
+                    sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
+                } else {
+                    //member of snapshot group
+                    if (performCheckpoint(
+                            checkpointMetaData,
+                            checkpointOptions,
+                            checkpointMetrics)) {
+                        if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
+                            runSynchronousSavepointMailboxLoop();
+                        }
                     }
                 }
             }
@@ -1486,6 +1512,24 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 finalCheckpointCompleted.complete(null);
             }
         }
+        if(currentRescalingCheckpointId == checkpointId){
+            restoreGates().thenRun(() -> {
+                //unblock input channels
+                for (IndexedInputGate inputGate : environment.getAllInputGates()) {
+                    for (int i = 0; i < inputGate.getNumberOfInputChannels(); i++) {
+                        try {
+                            inputGate.getChannel(i).resumeConsumption();
+                            LOG.debug(
+                                    "Unblocking input channel {} on input gate index {} in task {}",
+                                    i, inputGate.getInputGateIndex(), getName());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+                currentRescalingCheckpointId = -1;
+            });
+        }
     }
 
     private void tryShutdownTimerService() {
@@ -1637,9 +1681,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     @VisibleForTesting
     public static <OUT>
-            RecordWriterDelegate<SerializationDelegate<StreamRecord<OUT>>>
-                    createRecordWriterDelegate(
-                            StreamConfig configuration, Environment environment) {
+    RecordWriterDelegate<SerializationDelegate<StreamRecord<OUT>>>
+    createRecordWriterDelegate(
+            StreamConfig configuration, Environment environment) {
         List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> recordWrites =
                 createRecordWriters(configuration, environment);
         if (recordWrites.size() == 1) {
@@ -1652,8 +1696,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     }
 
     private static <OUT>
-            List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> createRecordWriters(
-                    StreamConfig configuration, Environment environment) {
+    List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> createRecordWriters(
+            StreamConfig configuration, Environment environment) {
         List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> recordWriters =
                 new ArrayList<>();
         List<StreamEdge> outEdgesInOrder =
@@ -1825,15 +1869,19 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         return environment;
     }
 
-    public void reloadRecordWriter(){
+    @Override
+    public void reloadRecordWriters() {
         for (int i = 0; i < recordWriter.getNumberOfRecordWriters(); i++) {
             RecordWriter rw = recordWriter.getRecordWriter(i);
-            int num = rw.reloadNumberOfChannels();
-            if(rw instanceof ChannelSelectorRecordWriter){
+            int numberOfTargetChannels = rw.reloadNumberOfChannels();
+            if (rw instanceof ChannelSelectorRecordWriter) {
                 ChannelSelectorRecordWriter csrw = (ChannelSelectorRecordWriter) rw;
-                if(csrw.getChannelSelector() instanceof ForwardPartitioner && num > 1){
+                csrw.getChannelSelector().setup(numberOfTargetChannels);
+                if (csrw.getChannelSelector() instanceof ForwardPartitioner
+                        && this.environment.getTaskInfo().getNumberOfParallelSubtasks()
+                        != numberOfTargetChannels) {
                     csrw.setChannelSelector(new RebalancePartitioner<Object>());
-                    csrw.getChannelSelector().setup(num);
+                    csrw.getChannelSelector().setup(numberOfTargetChannels);
                 }
             }
 

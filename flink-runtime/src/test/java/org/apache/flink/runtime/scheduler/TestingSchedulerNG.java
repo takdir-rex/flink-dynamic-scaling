@@ -33,6 +33,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmanager.PartitionProducerDisposedException;
 import org.apache.flink.runtime.jobmaster.SerializedInputSplit;
+import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
 import org.apache.flink.runtime.operators.coordination.CoordinationRequest;
@@ -173,6 +174,11 @@ public class TestingSchedulerNG implements SchedulerNG {
     @Override
     public void updateAccumulators(AccumulatorSnapshot accumulatorSnapshot) {
         failOperation();
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> rescale(final int jobVertexIndex, final int newParallelism) {
+        return CompletableFuture.completedFuture(Acknowledge.get());
     }
 
     @Override

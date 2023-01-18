@@ -29,6 +29,7 @@ import org.apache.flink.runtime.checkpoint.channel.ChannelStateWriterImpl;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
+import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.state.CheckpointStorageLocationReference;
 import org.apache.flink.runtime.state.CheckpointStorageWorkerView;
@@ -700,5 +701,10 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
                     "Time from receiving all checkpoint barriers/RPC to executing it exceeded threshold: {}ms",
                     delay);
         }
+    }
+
+    @Override
+    public JobVertex getJobVertex(){
+        return env.getJobVertex();
     }
 }

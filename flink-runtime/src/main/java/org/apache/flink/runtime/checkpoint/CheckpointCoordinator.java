@@ -37,6 +37,7 @@ import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.operators.coordination.OperatorCoordinator;
 import org.apache.flink.runtime.operators.coordination.OperatorInfo;
 import org.apache.flink.runtime.persistence.PossibleInconsistentStateException;
+import org.apache.flink.runtime.scheduler.strategy.SchedulingTopology;
 import org.apache.flink.runtime.state.CheckpointStorage;
 import org.apache.flink.runtime.state.CheckpointStorageCoordinatorView;
 import org.apache.flink.runtime.state.CheckpointStorageLocation;
@@ -226,6 +227,8 @@ public class CheckpointCoordinator {
 
     // --------------------------------------------------------------------------------------------
 
+    private final SchedulingTopology schedulingTopology;
+
     public CheckpointCoordinator(
             JobID job,
             CheckpointCoordinatorConfiguration chkConfig,
@@ -239,7 +242,8 @@ public class CheckpointCoordinator {
             SharedStateRegistryFactory sharedStateRegistryFactory,
             CheckpointFailureManager failureManager,
             CheckpointPlanCalculator checkpointPlanCalculator,
-            ExecutionAttemptMappingProvider attemptMappingProvider) {
+            ExecutionAttemptMappingProvider attemptMappingProvider,
+            SchedulingTopology schedulingTopology) {
 
         this(
                 job,
@@ -255,7 +259,8 @@ public class CheckpointCoordinator {
                 failureManager,
                 checkpointPlanCalculator,
                 attemptMappingProvider,
-                SystemClock.getInstance());
+                SystemClock.getInstance(),
+                schedulingTopology);
     }
 
     @VisibleForTesting
@@ -273,7 +278,8 @@ public class CheckpointCoordinator {
             CheckpointFailureManager failureManager,
             CheckpointPlanCalculator checkpointPlanCalculator,
             ExecutionAttemptMappingProvider attemptMappingProvider,
-            Clock clock) {
+            Clock clock,
+            SchedulingTopology schedulingTopology) {
 
         // sanity checks
         checkNotNull(checkpointStorage);
@@ -345,6 +351,8 @@ public class CheckpointCoordinator {
                         this.minPauseBetweenCheckpoints,
                         this.pendingCheckpoints::size,
                         this.checkpointsCleaner::getNumberOfCheckpointsToClean);
+
+        this.schedulingTopology = schedulingTopology;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -543,6 +551,9 @@ public class CheckpointCoordinator {
 
             CompletableFuture<CheckpointPlan> checkpointPlanFuture;
             if (request.snapshotGroup == null) {
+                checkpointPlanFuture = checkpointPlanCalculator.calculateCheckpointPlan();
+            } else if (request.snapshotGroup.startsWith("rescale-")) {
+                //checkpoint before for rescaling
                 checkpointPlanFuture = checkpointPlanCalculator.calculateCheckpointPlan();
             } else {
                 checkpointPlanFuture =
@@ -1315,11 +1326,30 @@ public class CheckpointCoordinator {
             LOG.debug(builder.toString());
         }
 
-        // send the "notify complete" call to all vertices, coordinators, etc.
-        sendAcknowledgeMessages(
-                pendingCheckpoint.getCheckpointPlan().getTasksToCommitTo(),
-                checkpointId,
-                completedCheckpoint.getTimestamp());
+        if(pendingCheckpoint.isRescaling()) {
+            //trigger rescaling
+            schedulingTopology.changeParallelism(
+                    pendingCheckpoint.getRescaledJobIdHexString(),
+                    pendingCheckpoint.getRescaledNewParallelism()).thenAccept(executionJobVertices -> {
+                try {
+                    restoreLatestCheckpointedStateToSubtasks(executionJobVertices).ifPresent(value -> {
+                        // send the "notify complete" call to all vertices, coordinators, etc.
+                        sendAcknowledgeMessages(
+                                pendingCheckpoint.getCheckpointPlan().getTasksToCommitTo(),
+                                checkpointId,
+                                completedCheckpoint.getTimestamp());
+                    });
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } else {
+            // send the "notify complete" call to all vertices, coordinators, etc.
+            sendAcknowledgeMessages(
+                    pendingCheckpoint.getCheckpointPlan().getTasksToCommitTo(),
+                    checkpointId,
+                    completedCheckpoint.getTimestamp());
+        }
     }
 
     void scheduleTriggerRequest() {
@@ -1555,7 +1585,7 @@ public class CheckpointCoordinator {
                     break;
                 }
                 if(!sg.isEmpty()){
-                    int sgNum = Integer.valueOf(sg.substring(sg.lastIndexOf("-")+1));
+                    int sgNum = Integer.valueOf(sg.substring(sg.lastIndexOf("-") + 1));
                     if(sgNum < min){
                         min = sgNum;
                         snapshotGroup = sg;

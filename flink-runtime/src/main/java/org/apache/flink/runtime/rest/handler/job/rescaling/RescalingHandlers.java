@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.rest.handler.job.rescaling;
 
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.rest.handler.HandlerRequest;
@@ -28,13 +29,22 @@ import org.apache.flink.runtime.rest.handler.async.AsynchronousOperationResult;
 import org.apache.flink.runtime.rest.handler.async.TriggerResponse;
 import org.apache.flink.runtime.rest.handler.job.AsynchronousJobOperationKey;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
+import org.apache.flink.runtime.rest.messages.JobIDPathParameter;
+import org.apache.flink.runtime.rest.messages.RescalingParallelismQueryParameter;
+import org.apache.flink.runtime.rest.messages.RescalingVertexQueryParameter;
+import org.apache.flink.runtime.rest.messages.TriggerId;
+import org.apache.flink.runtime.rest.messages.TriggerIdPathParameter;
+import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 
 import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.HttpResponseStatus;
 
+import org.apache.flink.util.SerializedThrowable;
+
 import javax.annotation.Nonnull;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -61,26 +71,39 @@ public class RescalingHandlers
         }
 
         @Override
-        public CompletableFuture<TriggerResponse> handleRequest(
-                @Nonnull
-                        final HandlerRequest<EmptyRequestBody, RescalingTriggerMessageParameters>
-                                request,
-                @Nonnull final RestfulGateway gateway)
-                throws RestHandlerException {
-            throw featureDisabledException();
-        }
-
-        @Override
         protected CompletableFuture<Acknowledge> triggerOperation(
                 HandlerRequest<EmptyRequestBody, RescalingTriggerMessageParameters> request,
-                RestfulGateway gateway) {
-            throw new UnsupportedOperationException();
+                RestfulGateway gateway) throws RestHandlerException {
+            final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
+            List<Integer> vertexQueryParameter = request.getQueryParameter(RescalingVertexQueryParameter.class);
+            List<Integer> parallelismQueryParameter = request.getQueryParameter(RescalingParallelismQueryParameter.class);
+
+            if (vertexQueryParameter.isEmpty()) {
+                throw new RestHandlerException("No vertex index was specified.", HttpResponseStatus.BAD_REQUEST);
+            }
+
+            final int jobVertexIndex = vertexQueryParameter.get(0);
+
+            if (parallelismQueryParameter.isEmpty()) {
+                throw new RestHandlerException("No new parallelism was specified.", HttpResponseStatus.BAD_REQUEST);
+            }
+
+            final int newParallelism = parallelismQueryParameter.get(0);
+
+            final CompletableFuture<Acknowledge> rescalingFuture = gateway.rescale(
+                    jobId,
+                    jobVertexIndex,
+                    newParallelism,
+                    RpcUtils.INF_TIMEOUT);
+
+            return rescalingFuture;
         }
 
         @Override
         protected AsynchronousJobOperationKey createOperationKey(
                 HandlerRequest<EmptyRequestBody, RescalingTriggerMessageParameters> request) {
-            throw new UnsupportedOperationException();
+            final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
+            return AsynchronousJobOperationKey.of(new TriggerId(), jobId);
         }
     }
 
@@ -97,32 +120,23 @@ public class RescalingHandlers
         }
 
         @Override
-        public CompletableFuture<AsynchronousOperationResult<AsynchronousOperationInfo>>
-                handleRequest(
-                        @Nonnull
-                                final HandlerRequest<
-                                                EmptyRequestBody, RescalingStatusMessageParameters>
-                                        request,
-                        @Nonnull final RestfulGateway gateway)
-                        throws RestHandlerException {
-            throw featureDisabledException();
-        }
-
-        @Override
         protected AsynchronousJobOperationKey getOperationKey(
                 HandlerRequest<EmptyRequestBody, RescalingStatusMessageParameters> request) {
-            throw new UnsupportedOperationException();
+            final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
+            final TriggerId triggerId = request.getPathParameter(TriggerIdPathParameter.class);
+
+            return AsynchronousJobOperationKey.of(triggerId, jobId);
         }
 
         @Override
         protected AsynchronousOperationInfo exceptionalOperationResultResponse(
                 Throwable throwable) {
-            throw new UnsupportedOperationException();
+            return AsynchronousOperationInfo.completeExceptional(new SerializedThrowable(throwable));
         }
 
         @Override
         protected AsynchronousOperationInfo operationResultResponse(Acknowledge operationResult) {
-            throw new UnsupportedOperationException();
+            return AsynchronousOperationInfo.complete();
         }
     }
 }

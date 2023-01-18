@@ -23,6 +23,7 @@ import org.apache.flink.runtime.checkpoint.CheckpointMetaData;
 import org.apache.flink.runtime.checkpoint.CheckpointMetricsBuilder;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.channel.ChannelStateWriter;
+import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.state.CheckpointStorageWorkerView;
 
 import java.io.Closeable;
@@ -95,4 +96,8 @@ public interface SubtaskCheckpointCoordinator extends Closeable {
 
     /** Waits for all the pending checkpoints to finish their asynchronous step. */
     void waitForPendingCheckpoints() throws Exception;
+
+    default JobVertex getJobVertex(){
+        return null;
+    }
 }

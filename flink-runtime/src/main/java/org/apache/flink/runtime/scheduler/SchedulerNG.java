@@ -36,6 +36,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmanager.PartitionProducerDisposedException;
 import org.apache.flink.runtime.jobmaster.SerializedInputSplit;
+import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.FlinkJobNotFoundException;
 import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
@@ -124,6 +125,8 @@ public interface SchedulerNG extends AutoCloseableAsync {
     void updateAccumulators(AccumulatorSnapshot accumulatorSnapshot);
 
     // ------------------------------------------------------------------------
+
+    CompletableFuture<Acknowledge> rescale(int jobVertexIndex, int newParallelism);
 
     CompletableFuture<String> triggerSavepoint(
             @Nullable String targetDirectory, boolean cancelJob, @Nullable String snapshotGroup);

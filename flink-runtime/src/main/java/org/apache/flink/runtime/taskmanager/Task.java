@@ -52,6 +52,7 @@ import org.apache.flink.runtime.io.network.NettyShuffleEnvironment;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.partition.PartitionProducerStateProvider;
+import org.apache.flink.runtime.io.network.partition.PipelinedApproximateSubpartition;
 import org.apache.flink.runtime.io.network.partition.PipelinedResultPartition;
 import org.apache.flink.runtime.io.network.partition.PipelinedSubpartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
@@ -60,7 +61,6 @@ import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
-import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGateFactory;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -461,7 +461,7 @@ public class Task
         executingThread = new Thread(TASK_THREADS_GROUP, this, taskNameWithSubtask);
     }
 
-    public void updateSubtaskParallelism(int newParallelism){
+    public void updateSubtaskParallelism(int newParallelism){ // the existing operator instances (before the new instances deployed) of the scaled task
         taskInfo.setNumberOfParallelSubtasks(newParallelism);
         this.taskNameWithSubtask = taskInfo.getTaskNameWithSubtasks();
         for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters){
@@ -474,7 +474,7 @@ public class Task
         }
     }
 
-    public void updateSubpartitionParallelism(int newParallelism){
+    public void updateSubpartitionParallelism(int newParallelism){ // the upstreams of the scaled task
         //adjust partition writer
         for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters){
             if(partitionWriter instanceof PipelinedResultPartition){
@@ -491,7 +491,11 @@ public class Task
                 //BufferWritingResultPartition states
                 partition.subpartitions = Arrays.copyOf(partition.subpartitions, newParallelism);
                 for (int i = oldParallelism; i < newParallelism; i++) {
-                    partition.subpartitions[i] = new PipelinedSubpartition(i, 2, partition);
+                    if(partition.subpartitions[0] instanceof PipelinedApproximateSubpartition){
+                        partition.subpartitions[i] = new PipelinedApproximateSubpartition(i, 2, partition);
+                    } else {
+                        partition.subpartitions[i] = new PipelinedSubpartition(i, 2, partition);
+                    }
                 }
                 partition.unicastBufferBuilders = Arrays.copyOf(partition.unicastBufferBuilders, newParallelism);
 
@@ -501,12 +505,13 @@ public class Task
         }
 
         //adjust record writer
-        invokable.reloadRecordWriter();
+        invokable.reloadRecordWriters();
     }
 
-    public void updateInputChannels(List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors){
+    public void updateInputChannels(List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors){ //the downstreams of the scaled task
         for (int i = 0; i < this.inputGates.length; i++) {
-            InputGate inputGate = inputGates[i];
+            InputGateWithMetrics inputGateWithMetrics = (InputGateWithMetrics) inputGates[i];
+            InputGate inputGate = inputGateWithMetrics.getInputGate();
             if(inputGate instanceof SingleInputGate) {
                 SingleInputGate singleInputGate = (SingleInputGate) inputGate;
                 final InputGateDeploymentDescriptor igdd =
@@ -517,6 +522,10 @@ public class Task
                 }
             }
         }
+    }
+
+    public void updateRecordWriters(){ // the scaled tasks (including the newly deployed instances)
+        invokable.reloadRecordWriters();
     }
 
     // ------------------------------------------------------------------------

@@ -857,6 +857,31 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         }
     }
 
+    @Override
+    public CompletableFuture<Acknowledge> updateRecordWriters(
+            ExecutionAttemptID executionAttemptID, Time timeout) {
+        final Task task = taskSlotTable.getTask(executionAttemptID);
+
+        if (task != null) {
+            try {
+
+                task.updateRecordWriters();
+
+                return CompletableFuture.completedFuture(Acknowledge.get());
+            } catch (Throwable t) {
+                return FutureUtils.completedExceptionally(
+                        new TaskException(
+                                "Cannot update task for execution " + executionAttemptID + '.', t));
+            }
+        } else {
+            final String message =
+                    "Cannot find task to be updated for execution " + executionAttemptID + '.';
+
+            log.debug(message);
+            return FutureUtils.completedExceptionally(new TaskException(message));
+        }
+    }
+
     private void setupResultPartitionBookkeeping(
             JobID jobId,
             Collection<ResultPartitionDeploymentDescriptor> producedResultPartitions,

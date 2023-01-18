@@ -493,7 +493,8 @@ public class CheckpointCoordinatorMasterHooksTest {
                         new ExecutionGraphCheckpointPlanCalculatorContext(graph),
                         graph.getVerticesTopologically(),
                         false),
-                new ExecutionAttemptMappingProvider(graph.getAllExecutionVertices()));
+                new ExecutionAttemptMappingProvider(graph.getAllExecutionVertices()),
+                null);
     }
 
     private static <T> T mockGeneric(Class<?> clazz) {

@@ -26,6 +26,7 @@ import org.apache.flink.runtime.checkpoint.channel.InputChannelInfo;
 import org.apache.flink.runtime.io.network.api.CancelCheckpointMarker;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.io.network.partition.consumer.CheckpointableInput;
+import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointableTask;
 import org.apache.flink.streaming.runtime.tasks.SubtaskCheckpointCoordinator;
 import org.apache.flink.util.ExceptionUtils;
@@ -147,6 +148,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
     public static SingleCheckpointBarrierHandler aligned(
             String taskName,
             CheckpointableTask toNotifyOnCheckpoint,
+            SubtaskCheckpointCoordinator checkpointCoordinator,
             Clock clock,
             int numOpenChannels,
             BiFunction<Callable<?>, Duration, Cancellable> registerTimer,
@@ -155,7 +157,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         return new SingleCheckpointBarrierHandler(
                 taskName,
                 toNotifyOnCheckpoint,
-                null,
+                checkpointCoordinator,
                 clock,
                 numOpenChannels,
                 new WaitingForFirstBarrier(inputs),
@@ -519,6 +521,11 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
             long barrierId = checkpointBarrier.getId();
             subTaskCheckpointCoordinator.initInputsCheckpoint(
                     barrierId, checkpointBarrier.getCheckpointOptions());
+        }
+
+        @Override
+        public JobVertex getJobVertex(){
+            return subTaskCheckpointCoordinator.getJobVertex();
         }
     }
 }

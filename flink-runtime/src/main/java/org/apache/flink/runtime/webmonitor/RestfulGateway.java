@@ -131,6 +131,14 @@ public interface RestfulGateway extends RpcGateway {
     CompletableFuture<Collection<Tuple2<ResourceID, String>>>
             requestTaskManagerMetricQueryServiceAddresses(@RpcTimeout Time timeout);
 
+    default CompletableFuture<Acknowledge> rescale(
+            JobID jobId,
+            int jobVertexIndex,
+            int newParallelism,
+            @RpcTimeout Time timeout) {
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * Triggers a savepoint with the given savepoint directory as a target.
      *

@@ -221,6 +221,11 @@ public interface JobMasterGateway
      */
     CompletableFuture<ExecutionGraphInfo> requestJob(@RpcTimeout Time timeout);
 
+    CompletableFuture<Acknowledge> rescale(
+            final int jobVertexIndex,
+            final int newParallelism,
+            @RpcTimeout final Time timeout);
+
     /**
      * Triggers taking a savepoint of the executed job.
      *

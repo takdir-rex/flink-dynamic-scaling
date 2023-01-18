@@ -167,6 +167,7 @@ public class InputProcessorUtil {
             return SingleCheckpointBarrierHandler.aligned(
                     taskName,
                     toNotifyOnCheckpoint,
+                    checkpointCoordinator,
                     clock,
                     numberOfChannels,
                     createRegisterTimerCallback(mailboxExecutor, timerService),

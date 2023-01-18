@@ -106,5 +106,5 @@ public interface TaskInvokable {
             Thread toInterrupt, @Nullable String taskName, @Nullable Long timeout);
 
     //reload number of channels after parallelism changes
-    default void reloadRecordWriter() {};
+    default void reloadRecordWriters() {};
 }

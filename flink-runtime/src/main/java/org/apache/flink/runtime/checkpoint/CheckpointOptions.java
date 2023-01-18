@@ -25,7 +25,10 @@ import org.apache.flink.runtime.state.CheckpointStorageLocationReference;
 import javax.annotation.Nullable;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -300,5 +303,23 @@ public class CheckpointOptions implements Serializable {
     public CheckpointOptions toUnaligned() {
         checkState(alignmentType == AlignmentType.ALIGNED);
         return unaligned(targetLocation);
+    }
+
+    public boolean isRescaling(){
+        if(getSnapshotGroup() != null){
+            return getSnapshotGroup().startsWith("rescale-");
+        }
+        return false;
+    }
+
+    public Set<String> getBlockedJobIdsForRescaling(){
+        if(!isRescaling()){
+            return new HashSet<>();
+        }
+        // after "rescale-<rescaled_job_id>:"
+        String targetJobsString = getSnapshotGroup();
+        targetJobsString = targetJobsString.substring(targetJobsString.indexOf(":") + 1);
+        String[] jobIdsStr = targetJobsString.split(",");
+        return new HashSet<>(Arrays.asList(jobIdsStr));
     }
 }

@@ -63,7 +63,7 @@ public class PipelinedApproximateSubpartition extends PipelinedSubpartition {
 
     private long repliedInFlightLogSIzeCounter = 0;
 
-    PipelinedApproximateSubpartition(
+    public PipelinedApproximateSubpartition(
             int index, int receiverExclusiveBuffersPerChannel, ResultPartition parent) {
         super(index, receiverExclusiveBuffersPerChannel, parent);
     }

@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.scheduler.strategy;
 
 import org.apache.flink.runtime.execution.ExecutionState;
+import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.failover.flip1.SchedulingPipelinedRegionComputeUtil;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
@@ -34,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -79,8 +81,8 @@ public class TestingSchedulingTopology implements SchedulingTopology {
     }
 
     @Override
-    public void changeParallelism(int jobVertexIndex, int newParallelism) {
-
+    public CompletableFuture<Set<ExecutionJobVertex>> changeParallelism(String rescaledJobIdHexString, int newParallelism) {
+        return CompletableFuture.completedFuture(new HashSet<>());
     }
 
     @Override

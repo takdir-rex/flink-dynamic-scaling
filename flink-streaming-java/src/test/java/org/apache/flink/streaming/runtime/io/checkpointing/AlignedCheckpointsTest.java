@@ -149,6 +149,7 @@ public class AlignedCheckpointsTest {
                 SingleCheckpointBarrierHandler.aligned(
                         "Testing",
                         toNotify,
+                        null,
                         SystemClock.getInstance(),
                         gate.getNumberOfInputChannels(),
                         (callable, duration) -> () -> {},

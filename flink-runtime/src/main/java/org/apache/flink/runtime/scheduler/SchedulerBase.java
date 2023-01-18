@@ -43,6 +43,7 @@ import org.apache.flink.runtime.concurrent.ComponentMainThreadExecutor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptorFactory;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
+import org.apache.flink.runtime.executiongraph.DefaultExecutionGraph;
 import org.apache.flink.runtime.executiongraph.DefaultVertexAttemptNumberStore;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
@@ -55,12 +56,14 @@ import org.apache.flink.runtime.executiongraph.failover.flip1.ResultPartitionAva
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
+import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmanager.PartitionProducerDisposedException;
 import org.apache.flink.runtime.jobmaster.SerializedInputSplit;
+import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.FlinkJobNotFoundException;
 import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.messages.webmonitor.JobDetails;
@@ -823,18 +826,26 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         executionGraph.updateAccumulators(accumulatorSnapshot);
     }
 
+    public CompletableFuture<Acknowledge> rescale(final int jobVertexIndex, final int newParallelism){
+        JobVertex rescaledJobVertex = ((DefaultExecutionGraph) executionGraph).getJobVertex(jobVertexIndex).getJobVertex();
+        String upstreamJobVertexIds = "";
+        for (JobEdge inputEdge : rescaledJobVertex.getInputs()) {
+            if(inputEdge.getSource() != null){
+                upstreamJobVertexIds += inputEdge.getSource().getProducer().getID().toHexString() + ",";
+            }
+        }
+        if(!upstreamJobVertexIds.isEmpty()){
+            upstreamJobVertexIds = upstreamJobVertexIds.substring(0, upstreamJobVertexIds.length()-1); //remove last separator (,)
+        }
+        //trigger global checkpoint and keep blocking all input channels after checkpoint barriers reach the given job vertex
+        triggerSavepoint(null, false, "rescale-" + rescaledJobVertex.getID().toHexString() + "=" + newParallelism + ":" + upstreamJobVertexIds);
+        return CompletableFuture.completedFuture(Acknowledge.get());
+    }
+
     @Override
     public CompletableFuture<String> triggerSavepoint(
             final String targetDirectory, final boolean cancelJob, final String snapshotGroup) {
-
-        if(snapshotGroup.startsWith("rescale")){
-            String[] params = snapshotGroup.split("-"); // format rescale-<job_index>-<new_parallelism>
-            schedulingTopology.changeParallelism(Integer.valueOf(params[1]), Integer.valueOf(params[2]));
-            return null;
-        }
-
         mainThreadExecutor.assertRunningInMainThread();
-
         final CheckpointCoordinator checkpointCoordinator =
                 executionGraph.getCheckpointCoordinator();
         if (checkpointCoordinator == null) {

@@ -18,9 +18,13 @@
 
 package org.apache.flink.runtime.scheduler.strategy;
 
+import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.topology.Topology;
+
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 /** Topology of {@link SchedulingExecutionVertex}. */
 public interface SchedulingTopology
@@ -51,5 +55,5 @@ public interface SchedulingTopology
     SchedulingResultPartition getResultPartition(
             IntermediateResultPartitionID intermediateResultPartitionId);
 
-    void changeParallelism(int jobVertexIndex, int newParallelism);
+    CompletableFuture<Set<ExecutionJobVertex>> changeParallelism(String rescaledJobIdHexString, int newParallelism);
 }

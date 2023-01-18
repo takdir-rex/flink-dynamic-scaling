@@ -405,6 +405,11 @@ public class TestingJobMasterGateway implements JobMasterGateway {
     }
 
     @Override
+    public CompletableFuture<Acknowledge> rescale(final int jobVertexIndex, final int newParallelism, final Time timeout){
+        return CompletableFuture.completedFuture(Acknowledge.get());
+    }
+
+    @Override
     public CompletableFuture<String> triggerSavepoint(
             @Nullable final String targetDirectory,
             final boolean cancelJob,
