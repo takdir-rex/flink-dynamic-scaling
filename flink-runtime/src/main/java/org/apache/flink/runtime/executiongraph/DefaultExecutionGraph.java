@@ -1581,4 +1581,8 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
     public ExecutionDeploymentListener getExecutionDeploymentListener() {
         return executionDeploymentListener;
     }
+
+    public IntermediateResultPartition getResultPartitionById(IntermediateResultPartitionID intermediateResultPartitionID){
+        return resultPartitionsById.get(intermediateResultPartitionID);
+    }
 }

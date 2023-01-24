@@ -247,6 +247,12 @@ public class TestingTaskExecutorGateway implements TaskExecutorGateway {
     }
 
     @Override
+    public CompletableFuture<Acknowledge> unblockChannels(
+            ExecutionAttemptID executionAttemptID, Time timeout) {
+        return CompletableFuture.completedFuture(Acknowledge.get());
+    }
+
+    @Override
     public void releaseOrPromotePartitions(
             JobID jobId,
             Set<ResultPartitionID> partitionToRelease,

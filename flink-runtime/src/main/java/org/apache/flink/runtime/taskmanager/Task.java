@@ -518,7 +518,24 @@ public class Task
                         inputGateDeploymentDescriptors.get(i);
                 ShuffleDescriptor[] shuffleDescriptors = igdd.getShuffleDescriptors();
                 if(shuffleDescriptors.length > singleInputGate.getNumberOfInputChannels()){
-                    singleInputGate.addInputChannels(shuffleEnvironment.createNewInputChannels(singleInputGate, shuffleDescriptors));
+                    InputChannel[] newChannels = shuffleEnvironment.createNewInputChannels(singleInputGate, shuffleDescriptors);
+                    singleInputGate.addInputChannels(newChannels);
+                }
+            }
+        }
+    }
+
+    public void unblockChannels() {
+        //unblock input channels
+        for (IndexedInputGate inputGate : inputGates) {
+            for (int i = 0; i < inputGate.getNumberOfInputChannels(); i++) {
+                try {
+                    inputGate.getChannel(i).resumeConsumption();
+                    LOG.debug(
+                            "Unblocking input channel {} on input gate index {} in task {}",
+                            i, inputGate.getInputGateIndex(), taskNameWithSubtask);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             }
         }

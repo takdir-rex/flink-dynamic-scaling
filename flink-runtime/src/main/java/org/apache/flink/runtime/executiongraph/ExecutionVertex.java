@@ -87,6 +87,8 @@ public class ExecutionVertex
 
     private final ArrayList<InputSplit> inputSplits;
 
+    private CompletableFuture<Void> runningFuture = new CompletableFuture<>();
+
     // --------------------------------------------------------------------------------------------
 
     /**
@@ -556,12 +558,19 @@ public class ExecutionVertex
         // only forward this notification if the execution is still the current execution
         // otherwise we have an outdated execution
         if (isCurrentExecution(execution)) {
+            if(newState == ExecutionState.RUNNING){
+                runningFuture.complete(null);
+            }
             getExecutionGraphAccessor().notifyExecutionChange(execution, newState);
         }
     }
 
     private boolean isCurrentExecution(Execution execution) {
         return currentExecution == execution;
+    }
+
+    public void startListenRunningFuture(){
+        runningFuture = new CompletableFuture<>();
     }
 
     // --------------------------------------------------------------------------------------------
@@ -584,5 +593,9 @@ public class ExecutionVertex
 
     public EvictingBoundedList<ArchivedExecution> getPriorExecutions() {
         return priorExecutions;
+    }
+
+    public CompletableFuture<Void> getRunningFuture() {
+        return runningFuture;
     }
 }

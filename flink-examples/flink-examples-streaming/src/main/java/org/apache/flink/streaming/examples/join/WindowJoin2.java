@@ -145,6 +145,14 @@ public class WindowJoin2 {
                 .name("Join")
                 .setParallelism(2);
 
+        DataStream<Tuple3<String, Integer, Integer>> joinForwarder = joinedStream.map(new MapFunction<Tuple3<String, Integer, Integer>, Tuple3<String, Integer, Integer>>() {
+
+            @Override
+            public Tuple3<String, Integer, Integer> map(Tuple3<String, Integer, Integer> value) throws Exception {
+                return value;
+            }
+        }).name("FW Join").setParallelism(1);
+
 //        DataStream<Tuple3<String, Integer, Integer>> joinedStream2 =
 //                runWindowJoin(grades, salaries, windowSize);
 //
@@ -154,7 +162,7 @@ public class WindowJoin2 {
 //                .snapshotGroup("snapshot-2");
 
         // print the results with a single thread, rather than in parallel
-        joinedStream.addSink(new DiscardingSink<>()).setParallelism(1).name("Sink");
+        joinForwarder.addSink(new FailingSink<>()).setParallelism(1).name("Sink");
 //        joinedStream2.addSink(new DiscardingSink<>()).setParallelism(1).uid("Sink2").name("Sink2").snapshotGroup("snapshot-2");
 
 //                System.out.println(env.getExecutionPlan());

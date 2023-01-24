@@ -132,6 +132,12 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
     }
 
     @Override
+    public CompletableFuture<Acknowledge> unblockChannels(
+            ExecutionAttemptID executionAttemptID, Time timeout) {
+        return originalGateway.unblockChannels(executionAttemptID, timeout);
+    }
+
+    @Override
     public void releaseOrPromotePartitions(
             JobID jobId,
             Set<ResultPartitionID> partitionToRelease,

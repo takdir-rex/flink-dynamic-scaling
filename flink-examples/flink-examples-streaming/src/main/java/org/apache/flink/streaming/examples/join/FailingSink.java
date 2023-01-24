@@ -22,8 +22,8 @@ public class FailingSink<T> implements SinkFunction<T> {
 //            count++;
 //        }
         LOG.info(value.toString());
-        if(Calendar.getInstance().get(Calendar.SECOND) == 0){
-            throw new Exception("Simulate failed");
-        }
+//        if(Calendar.getInstance().get(Calendar.SECOND) == 0){
+//            throw new Exception("Simulate failed");
+//        }
     }
 }

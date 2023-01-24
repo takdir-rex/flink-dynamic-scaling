@@ -74,6 +74,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
@@ -284,6 +285,28 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         }
     }
 
+    public ScheduledFuture<?> restartTasksForRescaling(final Set<ExecutionVertexID> verticesToRestart){
+        final Set<ExecutionVertexVersion> executionVertexVersions =
+                new HashSet<>(
+                        executionVertexVersioner
+                                .recordVertexModifications(verticesToRestart)
+                                .values());
+
+        addVerticesToRestartPending(verticesToRestart);
+
+        final CompletableFuture<?> cancelFuture = cancelTasksAsync(verticesToRestart);
+        return delayExecutor.schedule(
+                () ->
+                        FutureUtils.assertNoException(
+                                cancelFuture.thenRunAsync(
+                                        () -> {
+                                            restartTasksRescaling(executionVertexVersions);
+                                        },
+                                        getMainThreadExecutor())),
+                0,
+                TimeUnit.MILLISECONDS);
+    }
+
     private void restartTasksWithDelay(final FailureHandlingResult failureHandlingResult) {
         final Set<ExecutionVertexID> verticesToRestart =
                 failureHandlingResult.getVerticesToRestart();
@@ -327,6 +350,28 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         if (verticesWaitingForRestart.isEmpty()) {
             transitionExecutionGraphState(JobStatus.RESTARTING, JobStatus.RUNNING);
         }
+    }
+
+    private void restartTasksRescaling(final Set<ExecutionVertexVersion> executionVertexVersions) {
+        final Set<ExecutionVertexID> verticesToRestart =
+                executionVertexVersioner.getUnmodifiedExecutionVertices(executionVertexVersions);
+
+        removeVerticesFromRestartPending(verticesToRestart);
+
+        resetForNewExecutions(verticesToRestart);
+
+        try {
+            restoreState(verticesToRestart, false);
+        } catch (Throwable t) {
+            handleGlobalFailure(t);
+            return;
+        }
+
+        final DeploymentOption deploymentOption = new DeploymentOption(false);
+        final List<ExecutionVertexDeploymentOption> vertexDeploymentOptions =
+                SchedulingStrategyUtils.createExecutionVertexDeploymentOptions(
+                        verticesToRestart, id -> deploymentOption);
+        this.allocateSlotsAndDeploy(vertexDeploymentOptions);
     }
 
     private void restartTasks(
@@ -410,14 +455,9 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         waitForAllSlotsAndDeploy(deploymentHandles);
     }
 
-    public void requestNewSlotsAndDeploy(List<SchedulingExecutionVertex> vertices) {
+    public void requestNewSlots(List<SchedulingExecutionVertex> vertices) {
         SlotSharingExecutionSlotAllocator slotAllocator = (SlotSharingExecutionSlotAllocator) executionSlotAllocator;
         slotAllocator.requestNewSlotsAndDeploy(vertices);
-        final DeploymentOption deploymentOption = new DeploymentOption(false);
-        final List<ExecutionVertexDeploymentOption> vertexDeploymentOptions =
-                SchedulingStrategyUtils.createExecutionVertexDeploymentOptions(
-                        vertices.stream().map(SchedulingExecutionVertex::getId).collect(Collectors.toList()), id -> deploymentOption);
-        this.allocateSlotsAndDeploy(vertexDeploymentOptions);
     }
 
 

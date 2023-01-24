@@ -85,6 +85,12 @@ public class RpcTaskManagerGateway implements TaskManagerGateway {
     }
 
     @Override
+    public CompletableFuture<Acknowledge> unblockChannels(
+            ExecutionAttemptID executionAttemptID, Time timeout) {
+        return taskExecutorGateway.unblockChannels(executionAttemptID, timeout);
+    }
+
+    @Override
     public CompletableFuture<Acknowledge> cancelTask(
             ExecutionAttemptID executionAttemptID, Time timeout) {
         return taskExecutorGateway.cancelTask(executionAttemptID, timeout);

@@ -828,6 +828,10 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
 
     public CompletableFuture<Acknowledge> rescale(final int jobVertexIndex, final int newParallelism){
         JobVertex rescaledJobVertex = ((DefaultExecutionGraph) executionGraph).getJobVertex(jobVertexIndex).getJobVertex();
+        if(newParallelism == 5){
+            schedulingTopology.changeParallelism(rescaledJobVertex.getID().toHexString(), newParallelism);
+            return CompletableFuture.completedFuture(Acknowledge.get());
+        }
         String upstreamJobVertexIds = "";
         for (JobEdge inputEdge : rescaledJobVertex.getInputs()) {
             if(inputEdge.getSource() != null){

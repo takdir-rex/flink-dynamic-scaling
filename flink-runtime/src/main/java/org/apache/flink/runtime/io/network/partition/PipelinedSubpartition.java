@@ -398,6 +398,9 @@ public class PipelinedSubpartition extends ResultSubpartition
             BufferAvailabilityListener availabilityListener) {
         synchronized (buffers) {
             checkState(!isReleased);
+
+            releaseView(); // make it reconnectable
+
             checkState(
                     readView == null,
                     "Subpartition %s of is being (or already has been) consumed, "
@@ -415,6 +418,23 @@ public class PipelinedSubpartition extends ResultSubpartition
         }
 
         return readView;
+    }
+
+    private void releaseView() {
+        assert Thread.holdsLock(buffers);
+        if (readView != null) {
+            // upon reconnecting, two netty threads may require the same view to release
+            LOG.debug(
+                    "Releasing view of subpartition {} of {}.",
+                    getSubPartitionIndex(),
+                    parent.getPartitionId());
+
+            readView.releaseAllResources();
+            readView = null;
+
+            isBlocked = false;
+            sequenceNumber = 0;
+        }
     }
 
     public ResultSubpartitionView.AvailabilityWithBacklog getAvailabilityAndBacklog(

@@ -1301,7 +1301,8 @@ public class Execution
         }
     }
 
-    public void updateInputChannels() {
+    public CompletableFuture<Void> updateInputChannels() {
+        CompletableFuture<Void> result = new CompletableFuture<>();
         assertRunningInJobMasterMainThread();
         final LogicalSlot slot = assignedResource;
         if (slot != null) {
@@ -1325,6 +1326,8 @@ public class Execution
                         (ack, failure) -> {
                             if (failure != null) {
                                 fail(new Exception("Task could not be updated.", failure));
+                            } else {
+                                result.complete(null);
                             }
                         });
 
@@ -1332,6 +1335,7 @@ public class Execution
                 markFailed(t);
             }
         }
+        return result;
     }
 
     public void updateRecordWriters() {
@@ -1355,6 +1359,36 @@ public class Execution
                         (ack, failure) -> {
                             if (failure != null) {
                                 fail(new Exception("Task could not be updated.", failure));
+                            }
+                        });
+
+            } catch (Throwable t) {
+                markFailed(t);
+            }
+        }
+    }
+
+    public void unblockChannels() {
+        assertRunningInJobMasterMainThread();
+        final LogicalSlot slot = assignedResource;
+        if (slot != null) {
+            LOG.info(
+                    "Unblock all channels for task {} (attempt #{}) with attempt id {} to {} with allocation id {}",
+                    vertex.getTaskNameWithSubtaskIndex(),
+                    attemptNumber,
+                    vertex.getCurrentExecutionAttempt().getAttemptId(),
+                    getAssignedResourceLocation(),
+                    slot.getAllocationId());
+            try {
+
+                final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
+
+                CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.unblockChannels(attemptId, rpcTimeout);
+
+                resultFuture.whenComplete(
+                        (ack, failure) -> {
+                            if (failure != null) {
+                                fail(new Exception("Task channels could not be unblocked.", failure));
                             }
                         });
 

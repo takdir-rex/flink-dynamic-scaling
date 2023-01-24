@@ -1326,29 +1326,17 @@ public class CheckpointCoordinator {
             LOG.debug(builder.toString());
         }
 
+        // send the "notify complete" call to all vertices, coordinators, etc.
+        sendAcknowledgeMessages(
+                pendingCheckpoint.getCheckpointPlan().getTasksToCommitTo(),
+                checkpointId,
+                completedCheckpoint.getTimestamp());
+
         if(pendingCheckpoint.isRescaling()) {
             //trigger rescaling
             schedulingTopology.changeParallelism(
                     pendingCheckpoint.getRescaledJobIdHexString(),
-                    pendingCheckpoint.getRescaledNewParallelism()).thenAccept(executionJobVertices -> {
-                try {
-                    restoreLatestCheckpointedStateToSubtasks(executionJobVertices).ifPresent(value -> {
-                        // send the "notify complete" call to all vertices, coordinators, etc.
-                        sendAcknowledgeMessages(
-                                pendingCheckpoint.getCheckpointPlan().getTasksToCommitTo(),
-                                checkpointId,
-                                completedCheckpoint.getTimestamp());
-                    });
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        } else {
-            // send the "notify complete" call to all vertices, coordinators, etc.
-            sendAcknowledgeMessages(
-                    pendingCheckpoint.getCheckpointPlan().getTasksToCommitTo(),
-                    checkpointId,
-                    completedCheckpoint.getTimestamp());
+                    pendingCheckpoint.getRescaledNewParallelism());
         }
     }
 

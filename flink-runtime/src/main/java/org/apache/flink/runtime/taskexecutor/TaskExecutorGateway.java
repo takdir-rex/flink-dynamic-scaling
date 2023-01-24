@@ -101,6 +101,9 @@ public interface TaskExecutorGateway
     CompletableFuture<Acknowledge> updateRecordWriters(
             ExecutionAttemptID executionAttemptID, @RpcTimeout Time timeout);
 
+    CompletableFuture<Acknowledge> unblockChannels(
+            ExecutionAttemptID executionAttemptID, @RpcTimeout Time timeout);
+
     /**
      * Update the task where the given partitions can be found.
      *

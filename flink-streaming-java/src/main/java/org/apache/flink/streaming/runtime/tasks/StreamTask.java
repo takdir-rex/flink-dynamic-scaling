@@ -311,8 +311,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     @GuardedBy("shouldInterruptOnCancelLock")
     private boolean shouldInterruptOnCancel = true;
 
-    private long currentRescalingCheckpointId = -1;
-
     // ------------------------------------------------------------------------
 
     /**
@@ -506,8 +504,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      */
     protected void processInput(MailboxDefaultAction.Controller controller) throws Exception {
         DataInputStatus status = inputProcessor.processInput();
-//        String opName = getName();
-//        if(opName.contains("Sink (1")){
+        String opName = getName();
+//        if(opName.contains("Sink")){
 //            System.out.println("#### " + getName() + " " + status);
 //        }
         switch (status) {
@@ -1273,9 +1271,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             throws IOException {
         FlinkSecurityManager.monitorUserSystemExitForCurrentThread();
         try {
-            if(checkpointOptions.getBlockedJobIdsForRescaling().contains(environment.getJobVertex().getID().toHexString())){
-                this.currentRescalingCheckpointId = checkpointMetaData.getCheckpointId();
-            }
             if (Objects.isNull(checkpointOptions.getSnapshotGroup())
                     || checkpointOptions.isRescaling()) {
                 if (performCheckpoint(checkpointMetaData, checkpointOptions, checkpointMetrics)) {
@@ -1511,24 +1506,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                     && checkpointId >= finalCheckpointMinId) {
                 finalCheckpointCompleted.complete(null);
             }
-        }
-        if(currentRescalingCheckpointId == checkpointId){
-            restoreGates().thenRun(() -> {
-                //unblock input channels
-                for (IndexedInputGate inputGate : environment.getAllInputGates()) {
-                    for (int i = 0; i < inputGate.getNumberOfInputChannels(); i++) {
-                        try {
-                            inputGate.getChannel(i).resumeConsumption();
-                            LOG.debug(
-                                    "Unblocking input channel {} on input gate index {} in task {}",
-                                    i, inputGate.getInputGateIndex(), getName());
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }
-                currentRescalingCheckpointId = -1;
-            });
         }
     }
 
