@@ -345,7 +345,7 @@ public class SingleInputGate extends IndexedInputGate {
         }
     }
 
-    private void internalRequestPartitions() {
+    public void internalRequestPartitions() {
         for (InputChannel inputChannel : inputChannels.values()) {
             try {
                 inputChannel.requestSubpartition(consumedSubpartitionIndex);

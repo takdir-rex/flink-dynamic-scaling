@@ -190,6 +190,15 @@ public class Execution
 
     // --------------------------------------------------------------------------------------------
 
+    public Execution(
+            Executor executor,
+            ExecutionVertex vertex,
+            int attemptNumber,
+            long startTimestamp,
+            Time rpcTimeout) {
+        this(executor, vertex, attemptNumber,startTimestamp, rpcTimeout, new ExecutionAttemptID());
+    }
+
     /**
      * Creates a new Execution attempt.
      *
@@ -205,11 +214,12 @@ public class Execution
             ExecutionVertex vertex,
             int attemptNumber,
             long startTimestamp,
-            Time rpcTimeout) {
+            Time rpcTimeout,
+            ExecutionAttemptID attemptId) {
 
         this.executor = checkNotNull(executor);
         this.vertex = checkNotNull(vertex);
-        this.attemptId = new ExecutionAttemptID();
+        this.attemptId = attemptId;
         this.rpcTimeout = checkNotNull(rpcTimeout);
 
         this.attemptNumber = attemptNumber;

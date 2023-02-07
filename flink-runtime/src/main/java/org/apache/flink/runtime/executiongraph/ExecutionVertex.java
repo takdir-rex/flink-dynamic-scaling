@@ -385,7 +385,8 @@ public class ExecutionVertex
                             this,
                             oldExecution.getAttemptNumber() + 1,
                             timestamp,
-                            timeout);
+                            timeout,
+                            oldExecution.getAttemptId());
 
             currentExecution = newExecution;
 

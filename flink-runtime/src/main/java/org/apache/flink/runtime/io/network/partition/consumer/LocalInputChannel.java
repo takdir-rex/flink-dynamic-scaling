@@ -119,6 +119,11 @@ public class LocalInputChannel extends InputChannel implements BufferAvailabilit
         // The lock is required to request only once in the presence of retriggered requests.
         synchronized (requestLock) {
             checkState(!isReleased, "LocalInputChannel has been released already");
+            if(subpartitionView != null){
+                if(subpartitionView.isReleased()){ //need reconnection
+                    subpartitionView = null;
+                }
+            }
 
             if (subpartitionView == null) {
                 LOG.debug(

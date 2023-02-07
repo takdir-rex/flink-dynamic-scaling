@@ -514,12 +514,20 @@ public class Task
             InputGate inputGate = inputGateWithMetrics.getInputGate();
             if(inputGate instanceof SingleInputGate) {
                 SingleInputGate singleInputGate = (SingleInputGate) inputGate;
-                final InputGateDeploymentDescriptor igdd =
-                        inputGateDeploymentDescriptors.get(i);
-                ShuffleDescriptor[] shuffleDescriptors = igdd.getShuffleDescriptors();
-                if(shuffleDescriptors.length > singleInputGate.getNumberOfInputChannels()){
-                    InputChannel[] newChannels = shuffleEnvironment.createNewInputChannels(singleInputGate, shuffleDescriptors);
-                    singleInputGate.addInputChannels(newChannels);
+//                final InputGateDeploymentDescriptor igdd =
+//                        inputGateDeploymentDescriptors.get(i);
+//                ShuffleDescriptor[] shuffleDescriptors = igdd.getShuffleDescriptors();
+//                if(shuffleDescriptors.length > singleInputGate.getNumberOfInputChannels()){
+//                    InputChannel[] newChannels = shuffleEnvironment.createNewInputChannels(singleInputGate, shuffleDescriptors);
+//                    singleInputGate.addInputChannels(newChannels);
+//                }
+                singleInputGate.internalRequestPartitions();
+                for (InputChannel ch : singleInputGate.getInputChannels().values()){
+                    try {
+                        ch.resumeConsumption();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         }

@@ -706,17 +706,6 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                 throw new TaskSubmissionException("Could not submit task.", e);
             }
 
-            if (tdd.getAttemptNumber() > 0){//after restarting
-                if(taskInformation.getTaskName().startsWith("Sink") && tdd.getSubtaskIndex() == 0){ //sibling
-//                    taskInformation.setNumberOfSubtasks(2);
-                }
-                if(taskInformation.getTaskName().equalsIgnoreCase("join")){ //upstream
-                    for (ResultPartitionDeploymentDescriptor rpdd : tdd.getProducedPartitions()){
-                        rpdd.partitionDescriptor.numberOfSubpartitions = 2;
-                    }
-                }
-            }
-
             Task task =
                     new Task(
                             jobInformation,

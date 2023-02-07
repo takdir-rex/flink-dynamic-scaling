@@ -504,10 +504,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      */
     protected void processInput(MailboxDefaultAction.Controller controller) throws Exception {
         DataInputStatus status = inputProcessor.processInput();
-        String opName = getName();
-//        if(opName.contains("Sink")){
-//            System.out.println("#### " + getName() + " " + status);
-//        }
         switch (status) {
             case MORE_AVAILABLE:
                 if (recordWriter.isAvailable()) {

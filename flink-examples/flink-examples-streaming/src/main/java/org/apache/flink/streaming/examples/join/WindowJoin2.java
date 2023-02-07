@@ -69,8 +69,8 @@ public class WindowJoin2 {
                 "To customize example, use: WindowJoin [--windowSize <window-size-in-millis>] [--rate <elements-per-second>]");
 
         Configuration conf = new Configuration();
-        conf.setInteger("taskmanager.numberOfTaskSlots", 10);
-        conf.setInteger("local.number-taskmanager", 2); // for testing more than 1 task manager
+        conf.setInteger("taskmanager.numberOfTaskSlots", 20);
+        conf.setInteger("local.number-taskmanager", 1); // for testing more than 1 task manager
         final File checkpointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "checkpoint");
         final File savepointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "savepoint");
 
@@ -151,7 +151,7 @@ public class WindowJoin2 {
             public Tuple3<String, Integer, Integer> map(Tuple3<String, Integer, Integer> value) throws Exception {
                 return value;
             }
-        }).name("FW Join").setParallelism(1);
+        }).name("FWJ").setParallelism(1);
 
 //        DataStream<Tuple3<String, Integer, Integer>> joinedStream2 =
 //                runWindowJoin(grades, salaries, windowSize);
@@ -162,7 +162,7 @@ public class WindowJoin2 {
 //                .snapshotGroup("snapshot-2");
 
         // print the results with a single thread, rather than in parallel
-        joinForwarder.addSink(new FailingSink<>()).setParallelism(1).name("Sink");
+        joinForwarder.addSink(new DiscardingSink<>()).setParallelism(1).name("Sink");
 //        joinedStream2.addSink(new DiscardingSink<>()).setParallelism(1).uid("Sink2").name("Sink2").snapshotGroup("snapshot-2");
 
 //                System.out.println(env.getExecutionPlan());
