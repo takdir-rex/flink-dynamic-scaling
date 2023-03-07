@@ -278,23 +278,6 @@ public class NettyShuffleEnvironment
         }
     }
 
-    public InputChannel[] createNewInputChannels(SingleInputGate singleInputGate, ShuffleDescriptor[] shuffleDescriptors){
-        int numInputChanels = singleInputGate.getNumberOfInputChannels();
-        InputChannel[] newInputChannels = new InputChannel[shuffleDescriptors.length - numInputChanels];
-        SingleInputGateFactory.ChannelStatistics channelStatistics = new SingleInputGateFactory.ChannelStatistics();
-        synchronized (lock) {
-            for (int i = 0; i < newInputChannels.length; i++) {
-                newInputChannels[i] = singleInputGateFactory.createInputChannel(
-                        singleInputGate,
-                        numInputChanels + i,
-                        shuffleDescriptors[numInputChanels + i],
-                        channelStatistics,
-                        singleInputGate.getInputChannelMetrics());
-            }
-        }
-        return newInputChannels;
-    }
-
     /**
      * Registers legacy network metric groups before shuffle service refactoring.
      *

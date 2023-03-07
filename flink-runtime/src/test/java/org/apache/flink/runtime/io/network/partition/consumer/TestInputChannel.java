@@ -196,7 +196,7 @@ public class TestInputChannel extends InputChannel {
     }
 
     @Override
-    void releaseAllResources() throws IOException {
+    public void releaseAllResources() throws IOException {
         isReleased = true;
     }
 

@@ -112,7 +112,6 @@ public class LocalInputChannel extends InputChannel implements BufferAvailabilit
 
     @Override
     protected void requestSubpartition(int subpartitionIndex) throws IOException {
-
         boolean retriggerRequest = false;
         boolean notifyDataAvailable = false;
 
@@ -329,7 +328,7 @@ public class LocalInputChannel extends InputChannel implements BufferAvailabilit
 
     /** Releases the partition reader. */
     @Override
-    void releaseAllResources() throws IOException {
+    public void releaseAllResources() throws IOException {
         if (!isReleased) {
             isReleased = true;
 

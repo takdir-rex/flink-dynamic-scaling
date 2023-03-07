@@ -21,6 +21,7 @@ import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 
 import javax.annotation.Nullable;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 /**
@@ -107,4 +108,8 @@ public interface TaskInvokable {
 
     //reload number of channels after parallelism changes
     default void reloadRecordWriters() {};
+
+    default void recoverGate() {};
+
+    default CompletableFuture<Void> getRecoverGateFuture() {return null;};
 }

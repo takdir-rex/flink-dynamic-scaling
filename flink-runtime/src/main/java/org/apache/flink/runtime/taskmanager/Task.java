@@ -508,29 +508,32 @@ public class Task
         invokable.reloadRecordWriters();
     }
 
-    public void updateInputChannels(List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors){ //the downstreams of the scaled task
-        for (int i = 0; i < this.inputGates.length; i++) {
-            InputGateWithMetrics inputGateWithMetrics = (InputGateWithMetrics) inputGates[i];
-            InputGate inputGate = inputGateWithMetrics.getInputGate();
-            if(inputGate instanceof SingleInputGate) {
-                SingleInputGate singleInputGate = (SingleInputGate) inputGate;
-//                final InputGateDeploymentDescriptor igdd =
-//                        inputGateDeploymentDescriptors.get(i);
-//                ShuffleDescriptor[] shuffleDescriptors = igdd.getShuffleDescriptors();
-//                if(shuffleDescriptors.length > singleInputGate.getNumberOfInputChannels()){
-//                    InputChannel[] newChannels = shuffleEnvironment.createNewInputChannels(singleInputGate, shuffleDescriptors);
-//                    singleInputGate.addInputChannels(newChannels);
-//                }
-                singleInputGate.internalRequestPartitions();
-                for (InputChannel ch : singleInputGate.getInputChannels().values()){
-                    try {
-                        ch.resumeConsumption();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+    public CompletableFuture<Void> updateInputChannels(List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors){ //the downstreams of the scaled task
+        final String taskNameWithSubtaskAndId = taskNameWithSubtask + " (" + executionId + ')';
+        final ShuffleIOOwnerContext taskShuffleContext =
+                shuffleEnvironment
+                .createShuffleIOOwnerContext(
+                        taskNameWithSubtaskAndId, executionId, metrics.getIOMetricGroup());
+        final IndexedInputGate[] gates =
+                shuffleEnvironment
+                .createInputGates(taskShuffleContext, this, inputGateDeploymentDescriptors)
+                .toArray(new IndexedInputGate[0]);
+        CompletableFuture<Void> recoverGateFuture = null;
+        try {
+            for (int i = 0; i < this.inputGates.length; i++) {
+                InputGateWithMetrics inputGateWithMetrics = (InputGateWithMetrics) inputGates[i];
+                for (int j = 0; j < inputGateWithMetrics.getNumberOfInputChannels(); j++) {
+                    inputGateWithMetrics.getChannel(j).releaseAllResources();
                 }
+                inputGateWithMetrics.setInputGate(gates[i]);
+                inputGateWithMetrics.setup();
             }
+            recoverGateFuture = invokable.getRecoverGateFuture();
+            runWithSystemExitMonitoring(invokable::recoverGate);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        return recoverGateFuture;
     }
 
     public void unblockChannels() {

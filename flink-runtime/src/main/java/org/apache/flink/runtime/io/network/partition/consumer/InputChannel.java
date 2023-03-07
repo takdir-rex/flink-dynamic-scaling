@@ -210,7 +210,7 @@ public abstract class InputChannel {
     abstract boolean isReleased();
 
     /** Releases all resources of the channel. */
-    abstract void releaseAllResources() throws IOException;
+    public abstract void releaseAllResources() throws IOException;
 
     abstract void announceBufferSize(int newBufferSize);
 

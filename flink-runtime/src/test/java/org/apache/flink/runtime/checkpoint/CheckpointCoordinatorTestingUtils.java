@@ -826,7 +826,8 @@ public class CheckpointCoordinatorTestingUtils {
                     sharedStateRegistryFactory,
                     failureManager,
                     checkpointPlanCalculator,
-                    new ExecutionAttemptMappingProvider(executionGraph.getAllExecutionVertices()));
+                    new ExecutionAttemptMappingProvider(executionGraph.getAllExecutionVertices()),
+                    executionGraph.getSchedulingTopology());
         }
     }
 

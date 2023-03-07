@@ -206,6 +206,8 @@ public class SingleInputGate extends IndexedInputGate {
 
     private final InputChannelMetrics inputChannelMetrics;
 
+    private CompletableFuture<InputChannel>[] recoveryCompletionFutures = null;
+
     public SingleInputGate(
             String owningTaskName,
             int gateIndex,
@@ -754,6 +756,12 @@ public class SingleInputGate extends IndexedInputGate {
                 if (bufferAndAvailability.moreAvailable()) {
                     // enqueue the inputChannel at the end to avoid starvation
                     queueChannelUnsafe(inputChannel, bufferAndAvailability.morePriorityEvents());
+                } else {
+                    if(bufferAndAvailability.buffer().getDataType() == Buffer.DataType.RECOVERY_COMPLETION){
+                        if(recoveryCompletionFutures != null){
+                            this.recoveryCompletionFutures[inputChannel.getChannelIndex()].complete(inputChannel);
+                        }
+                    }
                 }
 
                 final boolean morePriorityEvents =
@@ -1057,5 +1065,14 @@ public class SingleInputGate extends IndexedInputGate {
 
     public InputChannelMetrics getInputChannelMetrics() {
         return inputChannelMetrics;
+    }
+
+    @Override
+    public CompletableFuture<InputChannel>[] getRecoveryCompletionFuture() {
+        recoveryCompletionFutures = new CompletableFuture[numberOfInputChannels];
+        for (int i = 0; i < numberOfInputChannels; i++) {
+            recoveryCompletionFutures[i] = new CompletableFuture<>();
+        }
+        return recoveryCompletionFutures;
     }
 }

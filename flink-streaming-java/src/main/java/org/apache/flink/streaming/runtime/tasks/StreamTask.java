@@ -132,11 +132,13 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.flink.configuration.TaskManagerOptions.BUFFER_DEBLOAT_PERIOD;
 import static org.apache.flink.util.ExceptionUtils.firstOrSuppressed;
@@ -281,7 +283,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     final MailboxExecutor mainMailboxExecutor;
 
     /** TODO it might be replaced by the global IO executor on TaskManager level future. */
-    private final ExecutorService channelIOExecutor;
+    private ExecutorService channelIOExecutor;
 
     // ========================================================
     //  Final  checkpoint / savepoint
@@ -310,6 +312,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     @GuardedBy("shouldInterruptOnCancelLock")
     private boolean shouldInterruptOnCancel = true;
+
+    private CompletableFuture<Void> recoverGateFuture = null;
 
     // ------------------------------------------------------------------------
 
@@ -456,6 +460,15 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         ThreadFactory timerThreadFactory =
                 new DispatcherThreadFactory(TRIGGER_THREAD_GROUP, timerThreadName);
         return new SystemProcessingTimeService(this::handleTimerException, timerThreadFactory);
+    }
+
+    private void injectChannelStateWriterIntoRecoveredChannels() {
+        final Environment env = getEnvironment();
+        final ChannelStateWriter channelStateWriter =
+                subtaskCheckpointCoordinator.getChannelStateWriter();
+        for (final InputGate gate : env.getAllInputGates()) {
+            gate.setChannelStateWriter(channelStateWriter);
+        }
     }
 
     private void injectChannelStateWriterIntoChannels() {
@@ -714,6 +727,64 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         isRunning = true;
     }
 
+    public void recoverGate() {
+        SequentialChannelStateReader reader =
+                getEnvironment().getTaskStateManager().getSequentialChannelStateReader();
+        try {
+            reader.readOutputData(
+                    getEnvironment().getAllWriters(), !configuration.isGraphContainingLoops());
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        channelIOExecutor.shutdown();
+        channelIOExecutor = Executors.newSingleThreadExecutor(
+                new ExecutorThreadFactory("channel-state-unspilling"));
+
+        injectChannelStateWriterIntoRecoveredChannels();
+
+        IndexedInputGate[] inputGates = getEnvironment().getAllInputGates();
+        channelIOExecutor.execute(
+                () -> {
+                    try {
+                        reader.readInputData(inputGates);
+                    } catch (Exception e) {
+                        asyncExceptionHandler.handleAsyncException(
+                                "Unable to read channel state", e);
+                    }
+                });
+
+        mailboxProcessor.resume();
+
+        List<CompletableFuture<Void>> recoveryCompletionFutures = new ArrayList<>();
+        for (InputGate inputGate : inputGates) {
+            Executor delayed = CompletableFuture.delayedExecutor(3L, TimeUnit.SECONDS);
+            for(CompletableFuture<InputChannel> future : inputGate.getRecoveryCompletionFuture()){
+                recoveryCompletionFutures.add(future.thenAccept(inputChannel -> {
+                    CompletableFuture.supplyAsync(() -> inputChannel, delayed)
+                            .thenAccept(inputChannel1 -> {
+                                try {
+                                    inputChannel.resumeConsumption();
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
+                }));
+            }
+            inputGate
+                    .getStateConsumedFuture()
+                    .thenRun(
+                            () ->
+                                    mainMailboxExecutor.execute(
+                                            inputGate::requestPartitions,
+                                            "Input gate request partitions"));
+        }
+        CompletableFuture.allOf(recoveryCompletionFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
+            channelIOExecutor.shutdown();
+            isRunning = true;
+            recoverGateFuture.complete(null);
+        });
+    }
+
     private CompletableFuture<Void> restoreGates() throws Exception {
         SequentialChannelStateReader reader =
                 getEnvironment().getTaskStateManager().getSequentialChannelStateReader();
@@ -736,7 +807,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         List<CompletableFuture<?>> recoveredFutures = new ArrayList<>(inputGates.length);
         for (InputGate inputGate : inputGates) {
             recoveredFutures.add(inputGate.getStateConsumedFuture());
-
             inputGate
                     .getStateConsumedFuture()
                     .thenRun(
@@ -1629,6 +1699,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     @Override
     public String toString() {
         return getName();
+    }
+
+    public CompletableFuture<Void> getRecoverGateFuture() {
+        recoverGateFuture = new CompletableFuture<>();
+        return recoverGateFuture;
     }
 
     // ------------------------------------------------------------------------

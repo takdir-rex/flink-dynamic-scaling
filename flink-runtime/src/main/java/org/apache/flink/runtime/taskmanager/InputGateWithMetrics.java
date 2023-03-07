@@ -42,7 +42,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class InputGateWithMetrics extends IndexedInputGate {
 
-    private final IndexedInputGate inputGate;
+    private IndexedInputGate inputGate;
 
     private final Counter numBytesIn;
 
@@ -173,5 +173,14 @@ public class InputGateWithMetrics extends IndexedInputGate {
 
     public IndexedInputGate getInputGate() {
         return inputGate;
+    }
+
+    public void setInputGate(IndexedInputGate inputGate) {
+        this.inputGate = inputGate;
+    }
+
+    @Override
+    public CompletableFuture<InputChannel>[] getRecoveryCompletionFuture() {
+        return this.inputGate.getRecoveryCompletionFuture();
     }
 }

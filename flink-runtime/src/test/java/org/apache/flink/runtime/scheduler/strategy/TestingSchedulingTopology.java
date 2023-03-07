@@ -81,9 +81,7 @@ public class TestingSchedulingTopology implements SchedulingTopology {
     }
 
     @Override
-    public CompletableFuture<Set<ExecutionJobVertex>> changeParallelism(String rescaledJobIdHexString, int newParallelism) {
-        return CompletableFuture.completedFuture(new HashSet<>());
-    }
+    public void changeParallelism(String rescaledJobIdHexString, int newParallelism) { }
 
     @Override
     public Iterable<SchedulingPipelinedRegion> getAllPipelinedRegions() {

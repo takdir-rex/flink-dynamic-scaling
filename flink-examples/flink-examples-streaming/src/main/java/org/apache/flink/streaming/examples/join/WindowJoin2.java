@@ -69,8 +69,8 @@ public class WindowJoin2 {
                 "To customize example, use: WindowJoin [--windowSize <window-size-in-millis>] [--rate <elements-per-second>]");
 
         Configuration conf = new Configuration();
-        conf.setInteger("taskmanager.numberOfTaskSlots", 20);
-        conf.setInteger("local.number-taskmanager", 1); // for testing more than 1 task manager
+        conf.setInteger("taskmanager.numberOfTaskSlots", 4);
+        conf.setInteger("local.number-taskmanager", 5); // for testing more than 1 task manager
         final File checkpointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "checkpoint");
         final File savepointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "savepoint");
 

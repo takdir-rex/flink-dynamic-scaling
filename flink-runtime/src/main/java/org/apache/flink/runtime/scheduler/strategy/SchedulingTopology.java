@@ -55,5 +55,5 @@ public interface SchedulingTopology
     SchedulingResultPartition getResultPartition(
             IntermediateResultPartitionID intermediateResultPartitionId);
 
-    CompletableFuture<Set<ExecutionJobVertex>> changeParallelism(String rescaledJobIdHexString, int newParallelism);
+    void changeParallelism(String rescaledJobIdHexString, int newParallelism);
 }

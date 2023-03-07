@@ -263,7 +263,7 @@ public class RemoteInputChannel extends InputChannel {
 
     /** Releases all exclusive and floating buffers, closes the partition request client. */
     @Override
-    void releaseAllResources() throws IOException {
+    public void releaseAllResources() throws IOException {
         if (isReleased.compareAndSet(false, true)) {
 
             final ArrayDeque<Buffer> releasedBuffers;

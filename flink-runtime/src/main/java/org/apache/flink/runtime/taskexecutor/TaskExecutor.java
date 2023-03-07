@@ -828,10 +828,11 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
         if (task != null) {
             try {
-
-                task.updateInputChannels(inputGateDeploymentDescriptors);
-
-                return CompletableFuture.completedFuture(Acknowledge.get());
+                final CompletableFuture<Acknowledge> ackFuture = new CompletableFuture<>();
+                task.updateInputChannels(inputGateDeploymentDescriptors).thenRun(() -> {
+                    ackFuture.complete(Acknowledge.get());
+                });
+                return ackFuture;
             } catch (Throwable t) {
                 return FutureUtils.completedExceptionally(
                         new TaskException(

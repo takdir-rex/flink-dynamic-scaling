@@ -211,6 +211,10 @@ public class MailboxProcessor implements Closeable {
         sendPoisonMail(() -> suspended = true);
     }
 
+    public void resume(){
+        this.suspendedDefaultAction = null;
+    }
+
     /**
      * Execute a single (as small as possible) step of the mailbox.
      *
