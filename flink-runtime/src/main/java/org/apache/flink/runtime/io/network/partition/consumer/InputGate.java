@@ -193,8 +193,4 @@ public abstract class InputGate
     public abstract CompletableFuture<Void> getStateConsumedFuture();
 
     public abstract void finishReadRecoveredState() throws IOException;
-
-    public CompletableFuture<InputChannel>[] getRecoveryCompletionFuture() {
-        return null;
-    }
 }

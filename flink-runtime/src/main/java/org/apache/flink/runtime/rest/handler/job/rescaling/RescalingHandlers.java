@@ -75,14 +75,14 @@ public class RescalingHandlers
                 HandlerRequest<EmptyRequestBody, RescalingTriggerMessageParameters> request,
                 RestfulGateway gateway) throws RestHandlerException {
             final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
-            List<Integer> vertexQueryParameter = request.getQueryParameter(RescalingVertexQueryParameter.class);
+            List<String> vertexQueryParameter = request.getQueryParameter(RescalingVertexQueryParameter.class);
             List<Integer> parallelismQueryParameter = request.getQueryParameter(RescalingParallelismQueryParameter.class);
 
             if (vertexQueryParameter.isEmpty()) {
                 throw new RestHandlerException("No vertex index was specified.", HttpResponseStatus.BAD_REQUEST);
             }
 
-            final int jobVertexIndex = vertexQueryParameter.get(0);
+            final String jobVertexId = vertexQueryParameter.get(0);
 
             if (parallelismQueryParameter.isEmpty()) {
                 throw new RestHandlerException("No new parallelism was specified.", HttpResponseStatus.BAD_REQUEST);
@@ -92,7 +92,7 @@ public class RescalingHandlers
 
             final CompletableFuture<Acknowledge> rescalingFuture = gateway.rescale(
                     jobId,
-                    jobVertexIndex,
+                    jobVertexId,
                     newParallelism,
                     RpcUtils.INF_TIMEOUT);
 

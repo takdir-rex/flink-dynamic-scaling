@@ -178,9 +178,4 @@ public class InputGateWithMetrics extends IndexedInputGate {
     public void setInputGate(IndexedInputGate inputGate) {
         this.inputGate = inputGate;
     }
-
-    @Override
-    public CompletableFuture<InputChannel>[] getRecoveryCompletionFuture() {
-        return this.inputGate.getRecoveryCompletionFuture();
-    }
 }

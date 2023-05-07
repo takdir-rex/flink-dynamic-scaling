@@ -61,6 +61,7 @@ import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.io.network.partition.TaskExecutorPartitionInfo;
 import org.apache.flink.runtime.io.network.partition.TaskExecutorPartitionTracker;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.InputSplitProvider;
 import org.apache.flink.runtime.jobgraph.tasks.TaskOperatorEventGateway;
@@ -772,39 +773,14 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
     }
 
     @Override
-    public CompletableFuture<Acknowledge> updateSubtaskParallelism(
-            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
-        final Task task = taskSlotTable.getTask(executionAttemptID);
-
-        if (task != null) {
-            try {
-
-                task.updateSubtaskParallelism(newParallelism);
-
-                return CompletableFuture.completedFuture(Acknowledge.get());
-            } catch (Throwable t) {
-                return FutureUtils.completedExceptionally(
-                        new TaskException(
-                                "Cannot update task for execution " + executionAttemptID + '.', t));
-            }
-        } else {
-            final String message =
-                    "Cannot find task to be updated for execution " + executionAttemptID + '.';
-
-            log.debug(message);
-            return FutureUtils.completedExceptionally(new TaskException(message));
-        }
-    }
-
-    @Override
     public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
-            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
+            ExecutionAttemptID executionAttemptID, Map<IntermediateResultPartitionID, Integer> partitionDescriptors, Time timeout) {
         final Task task = taskSlotTable.getTask(executionAttemptID);
 
         if (task != null) {
             try {
 
-                task.updateSubpartitionParallelism(newParallelism);
+                task.updateSubpartitionParallelism(partitionDescriptors);
 
                 return CompletableFuture.completedFuture(Acknowledge.get());
             } catch (Throwable t) {
@@ -862,31 +838,6 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                 return FutureUtils.completedExceptionally(
                         new TaskException(
                                 "Cannot unblock task channel for execution " + executionAttemptID + '.', t));
-            }
-        } else {
-            final String message =
-                    "Cannot find task to be updated for execution " + executionAttemptID + '.';
-
-            log.debug(message);
-            return FutureUtils.completedExceptionally(new TaskException(message));
-        }
-    }
-
-    @Override
-    public CompletableFuture<Acknowledge> updateRecordWriters(
-            ExecutionAttemptID executionAttemptID, Time timeout) {
-        final Task task = taskSlotTable.getTask(executionAttemptID);
-
-        if (task != null) {
-            try {
-
-                task.updateRecordWriters();
-
-                return CompletableFuture.completedFuture(Acknowledge.get());
-            } catch (Throwable t) {
-                return FutureUtils.completedExceptionally(
-                        new TaskException(
-                                "Cannot update task for execution " + executionAttemptID + '.', t));
             }
         } else {
             final String message =

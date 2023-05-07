@@ -32,6 +32,7 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.PartitionInfo;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmaster.AllocatedSlotReport;
 import org.apache.flink.runtime.jobmaster.JobMasterId;
@@ -47,6 +48,7 @@ import org.apache.flink.util.SerializedValue;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -100,15 +102,9 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
     }
 
     @Override
-    public CompletableFuture<Acknowledge> updateSubtaskParallelism(
-            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
-        return originalGateway.updateSubtaskParallelism(executionAttemptID, newParallelism, timeout);
-    }
-
-    @Override
     public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
-            ExecutionAttemptID executionAttemptID, int newParallelism, Time timeout) {
-        return originalGateway.updateSubpartitionParallelism(executionAttemptID, newParallelism, timeout);
+            ExecutionAttemptID executionAttemptID, Map<IntermediateResultPartitionID, Integer> partitionDescriptors, Time timeout) {
+        return originalGateway.updateSubpartitionParallelism(executionAttemptID, partitionDescriptors, timeout);
     }
 
     @Override
@@ -123,12 +119,6 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
     public CompletableFuture<Acknowledge> updateInputChannels(
             ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, Time timeout) {
         return originalGateway.updateInputChannels(executionAttemptID, inputGateDeploymentDescriptors, timeout);
-    }
-
-    @Override
-    public CompletableFuture<Acknowledge> updateRecordWriters(
-            ExecutionAttemptID executionAttemptID, Time timeout) {
-        return originalGateway.updateRecordWriters(executionAttemptID, timeout);
     }
 
     @Override

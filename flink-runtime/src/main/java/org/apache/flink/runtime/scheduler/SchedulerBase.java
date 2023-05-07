@@ -43,7 +43,6 @@ import org.apache.flink.runtime.concurrent.ComponentMainThreadExecutor;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptorFactory;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
-import org.apache.flink.runtime.executiongraph.DefaultExecutionGraph;
 import org.apache.flink.runtime.executiongraph.DefaultVertexAttemptNumberStore;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
@@ -826,19 +825,31 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         executionGraph.updateAccumulators(accumulatorSnapshot);
     }
 
-    public CompletableFuture<Acknowledge> rescale(final int jobVertexIndex, final int newParallelism){
-        JobVertex rescaledJobVertex = ((DefaultExecutionGraph) executionGraph).getJobVertex(jobVertexIndex).getJobVertex();
+    public CompletableFuture<Acknowledge> rescale(final String jobVertexId, final int newParallelism){
+        ExecutionJobVertex ejv = executionGraph.getJobVertex(JobVertexID.fromHexString(jobVertexId));
+        if(newParallelism == ejv.getParallelism()){
+            return CompletableFuture.completedFuture(Acknowledge.get());
+        }
+        if(newParallelism < ejv.getParallelism()){
+            // currently unsupported
+            return CompletableFuture.completedFuture(Acknowledge.get());
+        }
         String upstreamJobVertexIds = "";
-        for (JobEdge inputEdge : rescaledJobVertex.getInputs()) {
-            if(inputEdge.getSource() != null){
-                upstreamJobVertexIds += inputEdge.getSource().getProducer().getID().toHexString() + ",";
+        if(ejv.getJobVertex().isInputVertex()){
+            upstreamJobVertexIds = ejv.getJobVertexId().toHexString();
+        } else {
+            for (JobEdge inputEdge : ejv.getJobVertex().getInputs()) {
+                if(inputEdge.getSource() != null){
+                    upstreamJobVertexIds += inputEdge.getSource().getProducer().getID().toHexString() + ",";
+                }
             }
         }
         if(!upstreamJobVertexIds.isEmpty()){
-            upstreamJobVertexIds = upstreamJobVertexIds.substring(0, upstreamJobVertexIds.length()-1); //remove last separator (,)
+            upstreamJobVertexIds = upstreamJobVertexIds.substring(0, upstreamJobVertexIds.length() - 1); //remove last separator (,)
         }
+
         //trigger global checkpoint and keep blocking all input channels after checkpoint barriers reach the given job vertex
-        triggerSavepoint(null, false, "rescale-" + rescaledJobVertex.getID().toHexString() + "=" + newParallelism + ":" + upstreamJobVertexIds);
+        triggerSavepoint(null, false, "rescale-" + ejv.getJobVertexId().toHexString() + "=" + newParallelism + ":" + upstreamJobVertexIds);
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 

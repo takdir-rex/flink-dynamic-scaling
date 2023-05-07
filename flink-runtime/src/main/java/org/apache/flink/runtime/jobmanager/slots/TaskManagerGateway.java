@@ -27,6 +27,7 @@ import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.PartitionInfo;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.operators.coordination.OperatorEvent;
@@ -35,6 +36,7 @@ import org.apache.flink.runtime.taskexecutor.TaskExecutorOperatorEventGateway;
 import org.apache.flink.util.SerializedValue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -57,23 +59,14 @@ public interface TaskManagerGateway extends TaskExecutorOperatorEventGateway {
      */
     CompletableFuture<Acknowledge> submitTask(TaskDeploymentDescriptor tdd, Time timeout);
 
-    default CompletableFuture<Acknowledge> updateSubtaskParallelism(
-            ExecutionAttemptID executionAttemptID, int newParallelism, @RpcTimeout Time timeout) {
-        return CompletableFuture.completedFuture(Acknowledge.get());
-    }
-
     default CompletableFuture<Acknowledge> updateSubpartitionParallelism(
-            ExecutionAttemptID executionAttemptID, int newParallelism, @RpcTimeout Time timeout) {
+            ExecutionAttemptID executionAttemptID,
+            Map<IntermediateResultPartitionID, Integer> partitionDescriptors, @RpcTimeout Time timeout) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 
     default CompletableFuture<Acknowledge> updateInputChannels(
             ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, @RpcTimeout Time timeout) {
-        return CompletableFuture.completedFuture(Acknowledge.get());
-    }
-
-    default CompletableFuture<Acknowledge> updateRecordWriters(
-            ExecutionAttemptID executionAttemptID, @RpcTimeout Time timeout) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 

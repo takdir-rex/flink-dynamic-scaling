@@ -126,7 +126,7 @@ public interface SchedulerNG extends AutoCloseableAsync {
 
     // ------------------------------------------------------------------------
 
-    CompletableFuture<Acknowledge> rescale(int jobVertexIndex, int newParallelism);
+    CompletableFuture<Acknowledge> rescale(String jobVertexId, int newParallelism);
 
     CompletableFuture<String> triggerSavepoint(
             @Nullable String targetDirectory, boolean cancelJob, @Nullable String snapshotGroup);

@@ -204,10 +204,6 @@ public class SingleInputGate extends IndexedInputGate {
      */
     private final MemorySegment unpooledSegment;
 
-    private final InputChannelMetrics inputChannelMetrics;
-
-    private CompletableFuture<InputChannel>[] recoveryCompletionFutures = null;
-
     public SingleInputGate(
             String owningTaskName,
             int gateIndex,
@@ -220,23 +216,6 @@ public class SingleInputGate extends IndexedInputGate {
             @Nullable BufferDecompressor bufferDecompressor,
             MemorySegmentProvider memorySegmentProvider,
             int segmentSize) {
-        this(owningTaskName, gateIndex, consumedResultId, consumedPartitionType, consumedSubpartitionIndex, numberOfInputChannels, partitionProducerStateProvider, bufferPoolFactory, bufferDecompressor, memorySegmentProvider, segmentSize, null);
-    }
-
-    public SingleInputGate(
-            String owningTaskName,
-            int gateIndex,
-            IntermediateDataSetID consumedResultId,
-            final ResultPartitionType consumedPartitionType,
-            int consumedSubpartitionIndex,
-            int numberOfInputChannels,
-            PartitionProducerStateProvider partitionProducerStateProvider,
-            SupplierWithException<BufferPool, IOException> bufferPoolFactory,
-            @Nullable BufferDecompressor bufferDecompressor,
-            MemorySegmentProvider memorySegmentProvider,
-            int segmentSize,
-            InputChannelMetrics inputChannelMetrics) {
-
         this.owningTaskName = checkNotNull(owningTaskName);
         Preconditions.checkArgument(0 <= gateIndex, "The gate index must be positive.");
         this.gateIndex = gateIndex;
@@ -267,8 +246,6 @@ public class SingleInputGate extends IndexedInputGate {
         this.closeFuture = new CompletableFuture<>();
 
         this.unpooledSegment = MemorySegmentFactory.allocateUnpooledSegment(segmentSize);
-
-        this.inputChannelMetrics = inputChannelMetrics;
     }
 
     protected PrioritizedDeque<InputChannel> getInputChannelsWithData() {
@@ -756,12 +733,6 @@ public class SingleInputGate extends IndexedInputGate {
                 if (bufferAndAvailability.moreAvailable()) {
                     // enqueue the inputChannel at the end to avoid starvation
                     queueChannelUnsafe(inputChannel, bufferAndAvailability.morePriorityEvents());
-                } else {
-                    if(bufferAndAvailability.buffer().getDataType() == Buffer.DataType.RECOVERY_COMPLETION){
-                        if(recoveryCompletionFutures != null){
-                            this.recoveryCompletionFutures[inputChannel.getChannelIndex()].complete(inputChannel);
-                        }
-                    }
                 }
 
                 final boolean morePriorityEvents =
@@ -1061,18 +1032,5 @@ public class SingleInputGate extends IndexedInputGate {
 
     public Map<IntermediateResultPartitionID, InputChannel> getInputChannels() {
         return inputChannels;
-    }
-
-    public InputChannelMetrics getInputChannelMetrics() {
-        return inputChannelMetrics;
-    }
-
-    @Override
-    public CompletableFuture<InputChannel>[] getRecoveryCompletionFuture() {
-        recoveryCompletionFutures = new CompletableFuture[numberOfInputChannels];
-        for (int i = 0; i < numberOfInputChannels; i++) {
-            recoveryCompletionFutures[i] = new CompletableFuture<>();
-        }
-        return recoveryCompletionFutures;
     }
 }

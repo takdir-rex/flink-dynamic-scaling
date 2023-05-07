@@ -19,7 +19,7 @@
 package org.apache.flink.runtime.rest.messages;
 
 /** Vertex index for the rescaling of jobs specified as a {@link MessageQueryParameter}. */
-public class RescalingVertexQueryParameter extends MessageQueryParameter<Integer> {
+public class RescalingVertexQueryParameter extends MessageQueryParameter<String> {
 
     public static final String KEY = "vertex";
 
@@ -28,17 +28,17 @@ public class RescalingVertexQueryParameter extends MessageQueryParameter<Integer
     }
 
     @Override
-    public Integer convertStringToValue(String value) {
-        return Integer.valueOf(value);
-    }
-
-    @Override
-    public String convertValueToString(Integer value) {
-        return value.toString();
-    }
-
-    @Override
     public String getDescription() {
-        return "Positive integer value that specifies the desired vertex index.";
+        return "JobVertexID";
+    }
+
+    @Override
+    public String convertStringToValue(String value) throws ConversionException {
+        return value;
+    }
+
+    @Override
+    public String convertValueToString(String value) {
+        return value;
     }
 }

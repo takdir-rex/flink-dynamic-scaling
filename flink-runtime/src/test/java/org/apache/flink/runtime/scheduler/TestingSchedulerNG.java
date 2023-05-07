@@ -177,7 +177,7 @@ public class TestingSchedulerNG implements SchedulerNG {
     }
 
     @Override
-    public CompletableFuture<Acknowledge> rescale(final int jobVertexIndex, final int newParallelism) {
+    public CompletableFuture<Acknowledge> rescale(final String jobVertexId, final int newParallelism) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 

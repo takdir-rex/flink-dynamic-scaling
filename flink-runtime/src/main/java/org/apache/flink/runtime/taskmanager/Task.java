@@ -52,16 +52,15 @@ import org.apache.flink.runtime.io.network.NettyShuffleEnvironment;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.partition.PartitionProducerStateProvider;
-import org.apache.flink.runtime.io.network.partition.PipelinedApproximateSubpartition;
 import org.apache.flink.runtime.io.network.partition.PipelinedResultPartition;
 import org.apache.flink.runtime.io.network.partition.PipelinedSubpartition;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionConsumableNotifier;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.io.network.partition.ResultSubpartition;
 import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
-import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
-import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
+import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -75,7 +74,6 @@ import org.apache.flink.runtime.metrics.groups.TaskMetricGroup;
 import org.apache.flink.runtime.operators.coordination.OperatorEvent;
 import org.apache.flink.runtime.operators.coordination.TaskNotRunningException;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
-import org.apache.flink.runtime.shuffle.ShuffleDescriptor;
 import org.apache.flink.runtime.shuffle.ShuffleEnvironment;
 import org.apache.flink.runtime.shuffle.ShuffleIOOwnerContext;
 import org.apache.flink.runtime.state.TaskStateManager;
@@ -461,46 +459,48 @@ public class Task
         executingThread = new Thread(TASK_THREADS_GROUP, this, taskNameWithSubtask);
     }
 
-    public void updateSubtaskParallelism(int newParallelism){ // the existing operator instances (before the new instances deployed) of the scaled task
-        taskInfo.setNumberOfParallelSubtasks(newParallelism);
-        this.taskNameWithSubtask = taskInfo.getTaskNameWithSubtasks();
-        for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters){
-            if(partitionWriter instanceof PipelinedResultPartition){
-                PipelinedResultPartition partition = (PipelinedResultPartition) partitionWriter;
-                //ResultPartition states
-                final String taskNameWithSubtaskAndId = taskNameWithSubtask + " (" + executionId + ')';
-                partition.owningTaskName = taskNameWithSubtaskAndId;
-            }
-        }
-    }
-
-    public void updateSubpartitionParallelism(int newParallelism){ // the upstreams of the scaled task
+    public void updateSubpartitionParallelism(final Map<IntermediateResultPartitionID, Integer> partitionDescriptors){ // the upstreams of the scaled task
         //adjust partition writer
         for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters){
             if(partitionWriter instanceof PipelinedResultPartition){
                 PipelinedResultPartition partition = (PipelinedResultPartition) partitionWriter;
                 int oldParallelism = partition.getNumberOfSubpartitions();
-                int diff = newParallelism - oldParallelism;
-
+                int numOfSubpartitions = partitionDescriptors.get(partitionWriter.getPartitionId().getPartitionId());
+                int diff =  numOfSubpartitions - oldParallelism;
+                if(diff == 0){
+                    continue;
+                }
                 //PipelinedResultPartition states
-                partition.allRecordsProcessedSubpartitions = Arrays.copyOf(partition.allRecordsProcessedSubpartitions, newParallelism);
-                partition.numNotAllRecordsProcessedSubpartitions += diff;
-                partition.consumedSubpartitions = Arrays.copyOf(partition.consumedSubpartitions, newParallelism);
-                partition.numberOfUsers += diff;
-
-                //BufferWritingResultPartition states
-                partition.subpartitions = Arrays.copyOf(partition.subpartitions, newParallelism);
-                for (int i = oldParallelism; i < newParallelism; i++) {
-                    if(partition.subpartitions[0] instanceof PipelinedApproximateSubpartition){
-                        partition.subpartitions[i] = new PipelinedApproximateSubpartition(i, 2, partition);
+                partition.allRecordsProcessedSubpartitions = new boolean[numOfSubpartitions];
+                partition.numNotAllRecordsProcessedSubpartitions = numOfSubpartitions;
+                partition.consumedSubpartitions = new boolean[numOfSubpartitions];
+                partition.numberOfUsers = numOfSubpartitions + 1;
+                ResultSubpartition[] newSubpartitions = new ResultSubpartition[numOfSubpartitions];
+                for (int i = 0; i < numOfSubpartitions; i++) {
+                    if(i < partition.subpartitions.length){
+                        newSubpartitions[i] = partition.subpartitions[i];
                     } else {
-                        partition.subpartitions[i] = new PipelinedSubpartition(i, 2, partition);
+                        newSubpartitions[i] =  new PipelinedSubpartition(i, 2, partition);
                     }
                 }
-                partition.unicastBufferBuilders = Arrays.copyOf(partition.unicastBufferBuilders, newParallelism);
+                if(partition.subpartitions.length < newSubpartitions.length){
+                    for (int i = newSubpartitions.length - 1; i < partition.subpartitions.length; i++) {
+                        try {
+                            partition.subpartitions[i].release();
+                        } catch (IOException e) {
+                            LOG.warn(
+                                    "Failed to release subpartition {} in task {} due to {}",
+                                    i, taskNameWithSubtask, e);
+                        }
+                    }
+                }
 
-                //ResultPartition states
-                partition.numSubpartitions = newParallelism;
+                partition.subpartitions = newSubpartitions;
+
+                partition.unicastBufferBuilders = Arrays.copyOf(
+                        partition.unicastBufferBuilders,
+                        numOfSubpartitions);
+                partition.numSubpartitions = numOfSubpartitions;
             }
         }
 
@@ -550,10 +550,6 @@ public class Task
                 }
             }
         }
-    }
-
-    public void updateRecordWriters(){ // the scaled tasks (including the newly deployed instances)
-        invokable.reloadRecordWriters();
     }
 
     // ------------------------------------------------------------------------

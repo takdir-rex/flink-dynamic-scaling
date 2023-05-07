@@ -157,7 +157,8 @@ public class PipelinedSubpartition extends ResultSubpartition
     @Override
     public void finishReadRecoveredState(boolean notifyAndBlockOnCompletion) throws IOException {
         if (notifyAndBlockOnCompletion) {
-            add(EventSerializer.toBufferConsumer(EndOfChannelStateEvent.INSTANCE, false), 0, false);
+            // ### do not block operators when recovery finished
+//            add(EventSerializer.toBufferConsumer(EndOfChannelStateEvent.INSTANCE, false), 0, false);
         }
     }
 
@@ -315,6 +316,13 @@ public class PipelinedSubpartition extends ResultSubpartition
 
                 buffer = buildSliceBuffer(bufferConsumerWithPartialRecordLength);
 
+                if(!bufferConsumer.isFinished() && buffers.size() > 1){
+                    // ### ignore watermarks like messages when rescaling
+                    buffer.recycleBuffer();
+                    buffer = null;
+                    continue;
+                }
+
                 checkState(
                         bufferConsumer.isFinished() || buffers.size() == 1,
                         "When there are multiple buffers, an unfinished bufferConsumer can not be at the head of the buffers queue.");
@@ -379,7 +387,6 @@ public class PipelinedSubpartition extends ResultSubpartition
     void resumeConsumption() {
         synchronized (buffers) {
             checkState(isBlocked, "Should be blocked by checkpoint.");
-
             isBlocked = false;
         }
     }

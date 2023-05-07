@@ -222,7 +222,7 @@ public interface JobMasterGateway
     CompletableFuture<ExecutionGraphInfo> requestJob(@RpcTimeout Time timeout);
 
     CompletableFuture<Acknowledge> rescale(
-            final int jobVertexIndex,
+            final String jobVertexId,
             final int newParallelism,
             @RpcTimeout final Time timeout);
 

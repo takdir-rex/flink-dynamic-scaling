@@ -679,7 +679,7 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
     @Override
     public CompletableFuture<Acknowledge> rescale(
             final JobID jobId,
-            final int jobVertexIndex,
+            final String jobVertexId,
             final int newParallelism,
             final Time timeout) {
 
@@ -687,7 +687,7 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
                 jobId,
                 gateway ->
                         gateway.rescale(
-                                jobVertexIndex, newParallelism, timeout));
+                                jobVertexId, newParallelism, timeout));
     }
 
     @Override

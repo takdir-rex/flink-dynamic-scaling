@@ -828,10 +828,6 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
                 partitionGroupReleaseStrategyFactory.createInstance(getSchedulingTopology());
     }
 
-    public ExecutionJobVertex getJobVertex(int jobVertexIndex){
-        return this.tasks.get(verticesInCreationOrder.get(jobVertexIndex).getJobVertexId());
-    }
-
     public List<ExecutionVertex> changeParallelism(String rescaledJobIdHexString, int newParallelism) {
         ExecutionJobVertex executionJobVertex = this.tasks.get(JobVertexID.fromHexString(rescaledJobIdHexString));
         int oldParallelism = executionJobVertex.getParallelism();

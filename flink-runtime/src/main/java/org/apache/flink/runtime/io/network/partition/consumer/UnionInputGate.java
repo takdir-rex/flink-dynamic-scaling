@@ -405,12 +405,4 @@ public class UnionInputGate extends InputGate {
             inputGate.finishReadRecoveredState();
         }
     }
-
-    @Override
-    public CompletableFuture<InputChannel>[] getRecoveryCompletionFuture() {
-        return inputGatesByGateIndex.values().stream()
-                .map(InputGate::getRecoveryCompletionFuture)
-                .flatMap(Stream::of)
-                .toArray(CompletableFuture[]::new);
-    }
 }

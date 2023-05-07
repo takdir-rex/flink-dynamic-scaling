@@ -133,7 +133,7 @@ public interface RestfulGateway extends RpcGateway {
 
     default CompletableFuture<Acknowledge> rescale(
             JobID jobId,
-            int jobVertexIndex,
+            String jobVertexId,
             int newParallelism,
             @RpcTimeout Time timeout) {
         throw new UnsupportedOperationException();

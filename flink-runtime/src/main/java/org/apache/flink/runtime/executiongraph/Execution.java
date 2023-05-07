@@ -1277,38 +1277,25 @@ public class Execution
         }
     }
 
-    public void updateSubtaskParallelism(int newParallelism) {
+    public CompletableFuture<Void> updateSubpartitionParallelism(Map<IntermediateResultPartitionID, Integer> partitionDescriptors) {
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        assertRunningInJobMasterMainThread();
         final LogicalSlot slot = assignedResource;
-
         if (slot != null) {
             final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 
-            CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateSubtaskParallelism(attemptId, newParallelism, rpcTimeout);
+            CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateSubpartitionParallelism(attemptId, partitionDescriptors, rpcTimeout);
 
             resultFuture.whenComplete(
                     (ack, failure) -> {
                         if (failure != null) {
                             fail(new Exception("Task could not be updated.", failure));
+                        } else {
+                            result.complete(null);
                         }
                     });
         }
-    }
-
-    public void updateSubpartitionParallelism(int newParallelism) {
-        final LogicalSlot slot = assignedResource;
-
-        if (slot != null) {
-            final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
-
-            CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateSubpartitionParallelism(attemptId, newParallelism, rpcTimeout);
-
-            resultFuture.whenComplete(
-                    (ack, failure) -> {
-                        if (failure != null) {
-                            fail(new Exception("Task could not be updated.", failure));
-                        }
-                    });
-        }
+        return result;
     }
 
     public CompletableFuture<Void> updateInputChannels() {
@@ -1346,36 +1333,6 @@ public class Execution
             }
         }
         return result;
-    }
-
-    public void updateRecordWriters() {
-        assertRunningInJobMasterMainThread();
-        final LogicalSlot slot = assignedResource;
-        if (slot != null) {
-            LOG.info(
-                    "Updating RecordWriters of task {} (attempt #{}) with attempt id {} to {} with allocation id {}",
-                    vertex.getTaskNameWithSubtaskIndex(),
-                    attemptNumber,
-                    vertex.getCurrentExecutionAttempt().getAttemptId(),
-                    getAssignedResourceLocation(),
-                    slot.getAllocationId());
-            try {
-
-                final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
-
-                CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateRecordWriters(attemptId, rpcTimeout);
-
-                resultFuture.whenComplete(
-                        (ack, failure) -> {
-                            if (failure != null) {
-                                fail(new Exception("Task could not be updated.", failure));
-                            }
-                        });
-
-            } catch (Throwable t) {
-                markFailed(t);
-            }
-        }
     }
 
     public void unblockChannels() {

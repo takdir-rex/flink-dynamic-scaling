@@ -127,8 +127,7 @@ public class SingleInputGateFactory {
                         bufferPoolFactory,
                         bufferDecompressor,
                         networkBufferPool,
-                        networkBufferSize,
-                        metrics);
+                        networkBufferSize);
 
         createInputChannels(owningTaskName, igdd, inputGate, metrics);
         return inputGate;

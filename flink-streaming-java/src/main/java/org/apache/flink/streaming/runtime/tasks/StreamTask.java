@@ -743,6 +743,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         injectChannelStateWriterIntoRecoveredChannels();
 
         IndexedInputGate[] inputGates = getEnvironment().getAllInputGates();
+
         channelIOExecutor.execute(
                 () -> {
                     try {
@@ -755,30 +756,22 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
         mailboxProcessor.resume();
 
-        List<CompletableFuture<Void>> recoveryCompletionFutures = new ArrayList<>();
+        CompletableFuture[] recoverGateCompletionFutures = new CompletableFuture[inputGates.length];
+        int i = 0;
         for (InputGate inputGate : inputGates) {
-            Executor delayed = CompletableFuture.delayedExecutor(3L, TimeUnit.SECONDS);
-            for(CompletableFuture<InputChannel> future : inputGate.getRecoveryCompletionFuture()){
-                recoveryCompletionFutures.add(future.thenAccept(inputChannel -> {
-                    CompletableFuture.supplyAsync(() -> inputChannel, delayed)
-                            .thenAccept(inputChannel1 -> {
-                                try {
-                                    inputChannel.resumeConsumption();
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            });
-                }));
-            }
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            recoverGateCompletionFutures[i++] = future;
             inputGate
                     .getStateConsumedFuture()
                     .thenRun(
-                            () ->
-                                    mainMailboxExecutor.execute(
-                                            inputGate::requestPartitions,
-                                            "Input gate request partitions"));
+                            () -> {
+                                mainMailboxExecutor.execute(
+                                        inputGate::requestPartitions,
+                                        "Input gate request partitions");
+                                future.complete(null);
+                            });
         }
-        CompletableFuture.allOf(recoveryCompletionFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
+        CompletableFuture.allOf(recoverGateCompletionFutures).thenRun(() -> {
             channelIOExecutor.shutdown();
             isRunning = true;
             recoverGateFuture.complete(null);
@@ -1460,7 +1453,13 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                                 && this.finalCheckpointMinId == null) {
                             this.finalCheckpointMinId = checkpointMetaData.getCheckpointId();
                         }
-
+                        // ### suspend events consumption if the rescaled tasks are source operators
+                        if(checkpointOptions.isRescaling()){
+                            if(checkpointOptions.getBlockedJobIdsForRescaling().contains(environment.getJobID().toHexString()) &&
+                                this instanceof SourceStreamTask){
+                                mailboxProcessor.suspend();
+                            }
+                        }
                         subtaskCheckpointCoordinator.checkpointState(
                                 checkpointMetaData,
                                 checkpointOptions,

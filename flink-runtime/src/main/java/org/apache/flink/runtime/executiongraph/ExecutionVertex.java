@@ -34,6 +34,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobmaster.LogicalSlot;
 import org.apache.flink.runtime.scheduler.strategy.ConsumedPartitionGroup;
 import org.apache.flink.runtime.scheduler.strategy.ExecutionVertexID;
+import org.apache.flink.runtime.shuffle.PartitionDescriptor;
 import org.apache.flink.runtime.taskmanager.TaskManagerLocation;
 import org.apache.flink.runtime.util.EvictingBoundedList;
 
@@ -42,7 +43,9 @@ import org.slf4j.Logger;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -385,8 +388,7 @@ public class ExecutionVertex
                             this,
                             oldExecution.getAttemptNumber() + 1,
                             timestamp,
-                            timeout,
-                            oldExecution.getAttemptId());
+                            timeout);
 
             currentExecution = newExecution;
 
@@ -598,5 +600,15 @@ public class ExecutionVertex
 
     public CompletableFuture<Void> getRunningFuture() {
         return runningFuture;
+    }
+
+    public CompletableFuture<Void> updateSubpartitionParallelism() {
+        Collection<IntermediateResultPartition> partitions =
+                this.getProducedPartitions().values();
+        Map<IntermediateResultPartitionID, Integer> partitionDescriptors = new HashMap<>(partitions.size());
+        for (IntermediateResultPartition partition : partitions) {
+            partitionDescriptors.put(partition.getPartitionId(), PartitionDescriptor.from(partition).getNumberOfSubpartitions());
+        }
+        return this.getCurrentExecutionAttempt().updateSubpartitionParallelism(partitionDescriptors);
     }
 }

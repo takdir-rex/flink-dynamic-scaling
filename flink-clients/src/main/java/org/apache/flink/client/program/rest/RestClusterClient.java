@@ -491,12 +491,12 @@ public class RestClusterClient<T> implements ClusterClient<T> {
     }
 
     @Override
-    public CompletableFuture<Acknowledge> rescale(JobID jobId, int jobVertexIndex, int newParallelism) {
+    public CompletableFuture<Acknowledge> rescale(JobID jobId, String jobVertexId, int newParallelism) {
 
         final RescalingTriggerHeaders rescalingTriggerHeaders = RescalingTriggerHeaders.getInstance();
         final RescalingTriggerMessageParameters rescalingTriggerMessageParameters = rescalingTriggerHeaders.getUnresolvedMessageParameters();
         rescalingTriggerMessageParameters.jobPathParameter.resolve(jobId);
-        rescalingTriggerMessageParameters.rescalingVertexQueryParameter.resolve(Collections.singletonList(jobVertexIndex));
+        rescalingTriggerMessageParameters.rescalingVertexQueryParameter.resolve(Collections.singletonList(jobVertexId));
         rescalingTriggerMessageParameters.rescalingParallelismQueryParameter.resolve(Collections.singletonList(newParallelism));
 
         final CompletableFuture<TriggerResponse> rescalingTriggerResponseFuture = sendRequest(
