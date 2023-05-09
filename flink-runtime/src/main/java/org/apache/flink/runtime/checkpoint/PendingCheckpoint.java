@@ -96,6 +96,13 @@ public class PendingCheckpoint implements Checkpoint {
         return null;
     }
 
+    public String[] getBlockedJobIdsHexString(){
+        if(isRescaling()){
+            return snapshotGroup.substring(snapshotGroup.indexOf(":") + 1).split(",");
+        }
+        return null;
+    }
+
     /** Result of the {@link PendingCheckpoint#acknowledgedTasks} method. */
     public enum TaskAcknowledgeResult {
         SUCCESS, // successful acknowledge of the task

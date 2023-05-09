@@ -81,7 +81,7 @@ public class TestingSchedulingTopology implements SchedulingTopology {
     }
 
     @Override
-    public void changeParallelism(String rescaledJobIdHexString, int newParallelism) { }
+    public void changeParallelism(String rescaledJobIdHexString, int newParallelism, String[] blockedJobIdsHexString) { }
 
     @Override
     public Iterable<SchedulingPipelinedRegion> getAllPipelinedRegions() {

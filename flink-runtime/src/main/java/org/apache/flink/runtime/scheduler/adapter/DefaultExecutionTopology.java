@@ -154,9 +154,10 @@ public class DefaultExecutionTopology implements SchedulingTopology {
      * @return
      */
     @Override
-    public void changeParallelism(String rescaledJobIdHexString, int newParallelism) {
+    public void changeParallelism(String rescaledJobIdHexString, int newParallelism, String[] blockedJobIdsHexString) {
+        final ExecutionJobVertex rescaledEjv = executionGraph.getJobVertex(JobVertexID.fromHexString(rescaledJobIdHexString));
         //1. update execution graph and topology at Job Manager
-        List<ExecutionVertex> newVertices = executionGraph.changeParallelism(rescaledJobIdHexString, newParallelism);
+        List<ExecutionVertex> newVertices = executionGraph.changeParallelism(rescaledEjv, newParallelism);
 
         //add new vertices as new members of region
         List<ExecutionVertexID> newVerticesID = newVertices.stream().map(ExecutionVertex::getID).collect(
@@ -171,8 +172,6 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                     this.getPipelinedRegionOfVertex(vertex.getId());
             pipelinedRegionSchedulingStrategy.getRegionVerticesSorted().get(region).add(vertex.getId());
         }
-
-        final ExecutionJobVertex rescaledEjv = newVertices.get(0).getJobVertex();
 
         List<CompletableFuture> subpartitionFutures= new ArrayList<>();
         //3. also update result partitions of their upstreams
@@ -232,10 +231,13 @@ public class DefaultExecutionTopology implements SchedulingTopology {
             }
 
             CompletableFuture.allOf(updateChannelFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
-                //unblock the upstreams of rescaled task
-                for(IntermediateResult ir : rescaledEjv.getInputs()){
-                    for(ExecutionVertex vertex : ir.getProducer().getTaskVertices()){
-                        vertex.getCurrentExecutionAttempt().unblockChannels();
+                for (String blockedId : blockedJobIdsHexString){
+                    if(!blockedId.equals(rescaledJobIdHexString)) {
+                        for (ExecutionVertex vertex : executionGraph
+                                .getJobVertex(JobVertexID.fromHexString(blockedId))
+                                .getTaskVertices()) {
+                            vertex.getCurrentExecutionAttempt().unblockChannels();
+                        }
                     }
                 }
             });

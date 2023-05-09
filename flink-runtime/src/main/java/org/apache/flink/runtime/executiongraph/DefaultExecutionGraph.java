@@ -828,24 +828,23 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
                 partitionGroupReleaseStrategyFactory.createInstance(getSchedulingTopology());
     }
 
-    public List<ExecutionVertex> changeParallelism(String rescaledJobIdHexString, int newParallelism) {
-        ExecutionJobVertex executionJobVertex = this.tasks.get(JobVertexID.fromHexString(rescaledJobIdHexString));
-        int oldParallelism = executionJobVertex.getParallelism();
+    public List<ExecutionVertex> changeParallelism(ExecutionJobVertex rescaledJobVertex, int newParallelism) {
+        int oldParallelism = rescaledJobVertex.getParallelism();
         //update parallelism and adjust the number of ExecutionVertex and IntermediateResultPartitions
-        executionJobVertex.changeParallelism(newParallelism);
+        rescaledJobVertex.changeParallelism(newParallelism);
 
         //rebuild connections to upstreams
         //1. remove all previous connections to upstreams
-        ExecutionVertex[] executionVertices = executionJobVertex.getTaskVertices();
+        ExecutionVertex[] executionVertices = rescaledJobVertex.getTaskVertices();
         edgeManager.unregisterConsumedPartitions(executionVertices);
-        List<JobEdge> inputs = executionJobVertex.getJobVertex().getInputs();
+        List<JobEdge> inputs = rescaledJobVertex.getJobVertex().getInputs();
         for(JobEdge edge : inputs) {
             IntermediateResult ires = this.intermediateResults.get(edge.getSourceId());
             edgeManager.removeConnections(ires);
         }
         //2. reconnect to upstreams
         try {
-            executionJobVertex.reconnectToPredecessors(this.intermediateResults);
+            rescaledJobVertex.reconnectToPredecessors(this.intermediateResults);
         } catch (JobException e) {
             throw new RuntimeException(e);
         }
@@ -873,7 +872,7 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
         }
 
         //3. Also do reconnection to the direct downstreams
-        for(IntermediateDataSet producedDataSet : executionJobVertex.getJobVertex().getProducedDataSets()) {
+        for(IntermediateDataSet producedDataSet : rescaledJobVertex.getJobVertex().getProducedDataSets()) {
             for(JobEdge outputEdge : producedDataSet.getConsumers()){
                 //un-link and re-link the downstream edges
                 ExecutionJobVertex downstreamEjv = this.tasks.get(outputEdge.getTarget().getID());

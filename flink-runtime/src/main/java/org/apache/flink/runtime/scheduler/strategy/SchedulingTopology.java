@@ -55,5 +55,5 @@ public interface SchedulingTopology
     SchedulingResultPartition getResultPartition(
             IntermediateResultPartitionID intermediateResultPartitionId);
 
-    void changeParallelism(String rescaledJobIdHexString, int newParallelism);
+    void changeParallelism(String rescaledJobIdHexString, int newParallelism, String[] blockedJobIdsHexString);
 }

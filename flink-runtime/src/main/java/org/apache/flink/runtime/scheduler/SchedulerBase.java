@@ -53,6 +53,7 @@ import org.apache.flink.runtime.executiongraph.JobStatusListener;
 import org.apache.flink.runtime.executiongraph.TaskExecutionStateTransition;
 import org.apache.flink.runtime.executiongraph.failover.flip1.ResultPartitionAvailabilityChecker;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
@@ -834,18 +835,38 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
             // currently unsupported
             return CompletableFuture.completedFuture(Acknowledge.get());
         }
-        String upstreamJobVertexIds = "";
+        Set<String> upstreamJobVertexIdsSet = new HashSet<>();
         if(ejv.getJobVertex().isInputVertex()){
-            upstreamJobVertexIds = ejv.getJobVertexId().toHexString();
+            upstreamJobVertexIdsSet.add(jobVertexId);
         } else {
+            //need to block the upstreams of multiple input downstream
+            for (IntermediateDataSet producedDataSet : ejv.getJobVertex().getProducedDataSets()) {
+                for (JobEdge outputEdge : producedDataSet.getConsumers()) {
+                    for (JobEdge inputEdge : outputEdge.getTarget().getInputs()) {
+                        if(inputEdge.getSource() != null){
+                            String upstreamId = inputEdge.getSource().getProducer().getID().toHexString();
+                            if(!upstreamId.equals(jobVertexId)){
+                                upstreamJobVertexIdsSet.add(upstreamId);
+                            }
+                        }
+                    }
+                }
+            }
+
+            //blocking upstreams of rescaled job vertex
             for (JobEdge inputEdge : ejv.getJobVertex().getInputs()) {
                 if(inputEdge.getSource() != null){
-                    upstreamJobVertexIds += inputEdge.getSource().getProducer().getID().toHexString() + ",";
+                    upstreamJobVertexIdsSet.add(inputEdge.getSource().getProducer().getID().toHexString());
                 }
             }
         }
-        if(!upstreamJobVertexIds.isEmpty()){
-            upstreamJobVertexIds = upstreamJobVertexIds.substring(0, upstreamJobVertexIds.length() - 1); //remove last separator (,)
+
+        StringBuilder upstreamJobVertexIds = new StringBuilder();
+        for(String idStr : upstreamJobVertexIdsSet){
+            upstreamJobVertexIds.append(idStr).append(",");
+        }
+        if(upstreamJobVertexIds.length() > 0){
+            upstreamJobVertexIds.deleteCharAt(upstreamJobVertexIds.length()-1); //remove last separator (,)
         }
 
         //trigger global checkpoint and keep blocking all input channels after checkpoint barriers reach the given job vertex

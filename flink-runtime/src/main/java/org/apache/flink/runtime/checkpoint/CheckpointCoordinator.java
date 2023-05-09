@@ -1336,7 +1336,8 @@ public class CheckpointCoordinator {
             //trigger rescaling
             schedulingTopology.changeParallelism(
                     pendingCheckpoint.getRescaledJobIdHexString(),
-                    pendingCheckpoint.getRescaledNewParallelism());
+                    pendingCheckpoint.getRescaledNewParallelism(),
+                    pendingCheckpoint.getBlockedJobIdsHexString());
         }
     }
 
