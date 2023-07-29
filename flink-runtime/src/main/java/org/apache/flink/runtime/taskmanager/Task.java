@@ -459,65 +459,72 @@ public class Task
         executingThread = new Thread(TASK_THREADS_GROUP, this, taskNameWithSubtask);
     }
 
-    public void updateSubpartitionParallelism(final Map<IntermediateResultPartitionID, Integer> partitionDescriptors){ // the upstreams of the scaled task
-        //adjust partition writer
-        for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters){
-            if(partitionWriter instanceof PipelinedResultPartition){
+    public void updateSubpartitionParallelism(
+            final Map<IntermediateResultPartitionID, Integer>
+                    partitionDescriptors) { // the upstreams of the scaled task
+        // adjust partition writer
+        for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters) {
+            if (partitionWriter instanceof PipelinedResultPartition) {
                 PipelinedResultPartition partition = (PipelinedResultPartition) partitionWriter;
                 int oldParallelism = partition.getNumberOfSubpartitions();
-                int numOfSubpartitions = partitionDescriptors.get(partitionWriter.getPartitionId().getPartitionId());
-                int diff =  numOfSubpartitions - oldParallelism;
-                if(diff == 0){
+                int numOfSubpartitions =
+                        partitionDescriptors.get(partitionWriter.getPartitionId().getPartitionId());
+                int diff = numOfSubpartitions - oldParallelism;
+                if (diff == 0) {
                     continue;
                 }
-                //PipelinedResultPartition states
+                // PipelinedResultPartition states
                 partition.allRecordsProcessedSubpartitions = new boolean[numOfSubpartitions];
                 partition.numNotAllRecordsProcessedSubpartitions = numOfSubpartitions;
                 partition.consumedSubpartitions = new boolean[numOfSubpartitions];
                 partition.numberOfUsers = numOfSubpartitions + 1;
                 ResultSubpartition[] newSubpartitions = new ResultSubpartition[numOfSubpartitions];
                 for (int i = 0; i < numOfSubpartitions; i++) {
-                    if(i < partition.subpartitions.length){
+                    if (i < partition.subpartitions.length) {
                         newSubpartitions[i] = partition.subpartitions[i];
                     } else {
-                        newSubpartitions[i] =  new PipelinedSubpartition(i, 2, partition);
+                        newSubpartitions[i] = new PipelinedSubpartition(i, 2, partition);
                     }
                 }
-                if(partition.subpartitions.length < newSubpartitions.length){
-                    for (int i = newSubpartitions.length - 1; i < partition.subpartitions.length; i++) {
+                if (partition.subpartitions.length < newSubpartitions.length) {
+                    for (int i = newSubpartitions.length - 1;
+                            i < partition.subpartitions.length;
+                            i++) {
                         try {
                             partition.subpartitions[i].release();
                         } catch (IOException e) {
                             LOG.warn(
                                     "Failed to release subpartition {} in task {} due to {}",
-                                    i, taskNameWithSubtask, e);
+                                    i,
+                                    taskNameWithSubtask,
+                                    e);
                         }
                     }
                 }
 
                 partition.subpartitions = newSubpartitions;
 
-                partition.unicastBufferBuilders = Arrays.copyOf(
-                        partition.unicastBufferBuilders,
-                        numOfSubpartitions);
+                partition.unicastBufferBuilders =
+                        Arrays.copyOf(partition.unicastBufferBuilders, numOfSubpartitions);
                 partition.numSubpartitions = numOfSubpartitions;
             }
         }
 
-        //adjust record writer
+        // adjust record writer
         invokable.reloadRecordWriters();
     }
 
-    public CompletableFuture<Void> updateInputChannels(List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors){ //the downstreams of the scaled task
+    public CompletableFuture<Void> updateInputChannels(
+            List<InputGateDeploymentDescriptor>
+                    inputGateDeploymentDescriptors) { // the downstreams of the scaled task
         final String taskNameWithSubtaskAndId = taskNameWithSubtask + " (" + executionId + ')';
         final ShuffleIOOwnerContext taskShuffleContext =
-                shuffleEnvironment
-                .createShuffleIOOwnerContext(
+                shuffleEnvironment.createShuffleIOOwnerContext(
                         taskNameWithSubtaskAndId, executionId, metrics.getIOMetricGroup());
         final IndexedInputGate[] gates =
                 shuffleEnvironment
-                .createInputGates(taskShuffleContext, this, inputGateDeploymentDescriptors)
-                .toArray(new IndexedInputGate[0]);
+                        .createInputGates(taskShuffleContext, this, inputGateDeploymentDescriptors)
+                        .toArray(new IndexedInputGate[0]);
         CompletableFuture<Void> recoverGateFuture = null;
         try {
             for (int i = 0; i < this.inputGates.length; i++) {
@@ -537,14 +544,16 @@ public class Task
     }
 
     public void unblockChannels() {
-        //unblock input channels
+        // unblock input channels
         for (IndexedInputGate inputGate : inputGates) {
             for (int i = 0; i < inputGate.getNumberOfInputChannels(); i++) {
                 try {
                     inputGate.getChannel(i).resumeConsumption();
                     LOG.debug(
                             "Unblocking input channel {} on input gate index {} in task {}",
-                            i, inputGate.getInputGateIndex(), taskNameWithSubtask);
+                            i,
+                            inputGate.getInputGateIndex(),
+                            taskNameWithSubtask);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

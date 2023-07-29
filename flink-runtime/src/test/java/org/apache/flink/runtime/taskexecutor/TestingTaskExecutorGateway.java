@@ -218,7 +218,9 @@ public class TestingTaskExecutorGateway implements TaskExecutorGateway {
 
     @Override
     public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
-            ExecutionAttemptID executionAttemptID, Map<IntermediateResultPartitionID, Integer> partitionDescriptors, Time timeout) {
+            ExecutionAttemptID executionAttemptID,
+            Map<IntermediateResultPartitionID, Integer> partitionDescriptors,
+            Time timeout) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 
@@ -232,7 +234,9 @@ public class TestingTaskExecutorGateway implements TaskExecutorGateway {
 
     @Override
     public CompletableFuture<Acknowledge> updateInputChannels(
-            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, Time timeout) {
+            ExecutionAttemptID executionAttemptID,
+            List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors,
+            Time timeout) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 

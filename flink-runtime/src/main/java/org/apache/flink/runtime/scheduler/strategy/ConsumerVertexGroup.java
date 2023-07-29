@@ -55,7 +55,7 @@ public class ConsumerVertexGroup implements Iterable<ExecutionVertexID> {
         return iterator().next();
     }
 
-    public void addVertex(ExecutionVertexID executionVertexID){
+    public void addVertex(ExecutionVertexID executionVertexID) {
         vertices.add(executionVertexID);
     }
 }

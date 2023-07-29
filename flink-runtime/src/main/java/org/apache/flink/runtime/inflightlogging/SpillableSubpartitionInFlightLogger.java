@@ -88,7 +88,7 @@ public class SpillableSubpartitionInFlightLogger implements InFlightLog {
 
             Epoch epoch = slicedLog.computeIfAbsent(epochID, k -> new Epoch(createNewWriter(k), k));
             epoch.append(buffer);
-//            if (eagerlySpill) flushAllUnflushed();
+            //            if (eagerlySpill) flushAllUnflushed();
             if (isReplaying.get()) currentIterator.notifyNewBufferAdded(epochID);
         }
         LOG.debug(

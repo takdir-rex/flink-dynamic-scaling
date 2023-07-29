@@ -52,7 +52,17 @@ public class CliOptions {
             String updateStatement,
             String historyFilePath,
             Configuration pythonConfiguration) {
-        this(isPrintHelp, sessionId, initFile, sqlFile, jars, libraryDirs, updateStatement, historyFilePath, pythonConfiguration, "");
+        this(
+                isPrintHelp,
+                sessionId,
+                initFile,
+                sqlFile,
+                jars,
+                libraryDirs,
+                updateStatement,
+                historyFilePath,
+                pythonConfiguration,
+                "");
     }
 
     public CliOptions(

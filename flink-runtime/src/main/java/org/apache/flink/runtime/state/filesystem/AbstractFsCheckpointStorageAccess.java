@@ -157,8 +157,8 @@ public abstract class AbstractFsCheckpointStorageAccess implements CheckpointSto
             throws IOException {
 
         // determine where to write the savepoint to
-        if(snapshotGroup != null){
-            if(snapshotGroup.startsWith("rescale-")){
+        if (snapshotGroup != null) {
+            if (snapshotGroup.startsWith("rescale-")) {
                 snapshotGroup = null;
             }
         }

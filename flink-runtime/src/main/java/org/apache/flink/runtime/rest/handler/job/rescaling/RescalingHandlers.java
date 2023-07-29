@@ -25,8 +25,6 @@ import org.apache.flink.runtime.rest.handler.HandlerRequest;
 import org.apache.flink.runtime.rest.handler.RestHandlerException;
 import org.apache.flink.runtime.rest.handler.async.AbstractAsynchronousOperationHandlers;
 import org.apache.flink.runtime.rest.handler.async.AsynchronousOperationInfo;
-import org.apache.flink.runtime.rest.handler.async.AsynchronousOperationResult;
-import org.apache.flink.runtime.rest.handler.async.TriggerResponse;
 import org.apache.flink.runtime.rest.handler.job.AsynchronousJobOperationKey;
 import org.apache.flink.runtime.rest.messages.EmptyRequestBody;
 import org.apache.flink.runtime.rest.messages.JobIDPathParameter;
@@ -37,12 +35,9 @@ import org.apache.flink.runtime.rest.messages.TriggerIdPathParameter;
 import org.apache.flink.runtime.rpc.RpcUtils;
 import org.apache.flink.runtime.webmonitor.RestfulGateway;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
-
-import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.HttpResponseStatus;
-
 import org.apache.flink.util.SerializedThrowable;
 
-import javax.annotation.Nonnull;
+import org.apache.flink.shaded.netty4.io.netty.handler.codec.http.HttpResponseStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -73,28 +68,30 @@ public class RescalingHandlers
         @Override
         protected CompletableFuture<Acknowledge> triggerOperation(
                 HandlerRequest<EmptyRequestBody, RescalingTriggerMessageParameters> request,
-                RestfulGateway gateway) throws RestHandlerException {
+                RestfulGateway gateway)
+                throws RestHandlerException {
             final JobID jobId = request.getPathParameter(JobIDPathParameter.class);
-            List<String> vertexQueryParameter = request.getQueryParameter(RescalingVertexQueryParameter.class);
-            List<Integer> parallelismQueryParameter = request.getQueryParameter(RescalingParallelismQueryParameter.class);
+            List<String> vertexQueryParameter =
+                    request.getQueryParameter(RescalingVertexQueryParameter.class);
+            List<Integer> parallelismQueryParameter =
+                    request.getQueryParameter(RescalingParallelismQueryParameter.class);
 
             if (vertexQueryParameter.isEmpty()) {
-                throw new RestHandlerException("No vertex index was specified.", HttpResponseStatus.BAD_REQUEST);
+                throw new RestHandlerException(
+                        "No vertex index was specified.", HttpResponseStatus.BAD_REQUEST);
             }
 
             final String jobVertexId = vertexQueryParameter.get(0);
 
             if (parallelismQueryParameter.isEmpty()) {
-                throw new RestHandlerException("No new parallelism was specified.", HttpResponseStatus.BAD_REQUEST);
+                throw new RestHandlerException(
+                        "No new parallelism was specified.", HttpResponseStatus.BAD_REQUEST);
             }
 
             final int newParallelism = parallelismQueryParameter.get(0);
 
-            final CompletableFuture<Acknowledge> rescalingFuture = gateway.rescale(
-                    jobId,
-                    jobVertexId,
-                    newParallelism,
-                    RpcUtils.INF_TIMEOUT);
+            final CompletableFuture<Acknowledge> rescalingFuture =
+                    gateway.rescale(jobId, jobVertexId, newParallelism, RpcUtils.INF_TIMEOUT);
 
             return rescalingFuture;
         }
@@ -131,7 +128,8 @@ public class RescalingHandlers
         @Override
         protected AsynchronousOperationInfo exceptionalOperationResultResponse(
                 Throwable throwable) {
-            return AsynchronousOperationInfo.completeExceptional(new SerializedThrowable(throwable));
+            return AsynchronousOperationInfo.completeExceptional(
+                    new SerializedThrowable(throwable));
         }
 
         @Override

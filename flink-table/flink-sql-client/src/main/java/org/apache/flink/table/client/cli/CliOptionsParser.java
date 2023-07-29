@@ -143,8 +143,7 @@ public class CliOptionsParser {
                     .longOpt("snapshotgroups")
                     .numberOfArgs(1)
                     .argName("Snapshot Groups")
-                    .desc(
-                            "Comma separated indexes of snapshot groups to be created")
+                    .desc("Comma separated indexes of snapshot groups to be created")
                     .build();
 
     private static final Options EMBEDDED_MODE_CLIENT_OPTIONS =

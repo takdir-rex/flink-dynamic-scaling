@@ -50,9 +50,7 @@ import org.apache.flink.runtime.io.network.api.writer.ResultPartitionWriter;
 import org.apache.flink.runtime.io.network.api.writer.SingleRecordWriter;
 import org.apache.flink.runtime.io.network.partition.ChannelStateHolder;
 import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
-import org.apache.flink.runtime.io.network.partition.consumer.InputChannel;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
-import org.apache.flink.runtime.io.network.partition.consumer.SingleInputGate;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointableTask;
 import org.apache.flink.runtime.jobgraph.tasks.CoordinatedTask;
@@ -69,7 +67,6 @@ import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.state.StateBackendLoader;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.runtime.taskmanager.DispatcherThreadFactory;
-import org.apache.flink.runtime.taskmanager.InputGateWithMetrics;
 import org.apache.flink.runtime.taskmanager.Task;
 import org.apache.flink.runtime.throughput.ThroughputCalculator;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -132,13 +129,11 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.flink.configuration.TaskManagerOptions.BUFFER_DEBLOAT_PERIOD;
 import static org.apache.flink.util.ExceptionUtils.firstOrSuppressed;
@@ -189,10 +184,10 @@ import static org.apache.flink.util.concurrent.FutureUtils.assertNoException;
 @Internal
 public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         implements TaskInvokable,
-        CheckpointableTask,
-        CoordinatedTask,
-        AsyncExceptionHandler,
-        ContainingTaskDetails {
+                CheckpointableTask,
+                CoordinatedTask,
+                AsyncExceptionHandler,
+                ContainingTaskDetails {
 
     /** The thread group that holds all trigger timer threads. */
     public static final ThreadGroup TRIGGER_THREAD_GROUP = new ThreadGroup("Triggers");
@@ -215,8 +210,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     private final StreamTaskActionExecutor actionExecutor;
 
     /** The input processor. Initialized in {@link #init()} method. */
-    @Nullable
-    protected StreamInputProcessor inputProcessor;
+    @Nullable protected StreamInputProcessor inputProcessor;
 
     /** the main operator that consumes the input streams of this task. */
     protected OP mainOperator;
@@ -358,9 +352,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      * @param environment The task environment for this task.
      * @param timerService Optionally, a specific timer service to use.
      * @param uncaughtExceptionHandler to handle uncaught exceptions in the async operations thread
-     *         pool
+     *     pool
      * @param actionExecutor a mean to wrap all actions performed by this task thread. Currently,
-     *         only SynchronizedActionExecutor can be used to preserve locking semantics.
+     *     only SynchronizedActionExecutor can be used to preserve locking semantics.
      */
     protected StreamTask(
             Environment environment,
@@ -503,16 +497,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     protected abstract void init() throws Exception;
 
-    protected void cancelTask() throws Exception {
-    }
+    protected void cancelTask() throws Exception {}
 
     /**
      * This method implements the default action of the task (e.g. processing one event from the
      * input). Implementations should (in general) be non-blocking.
      *
      * @param controller controller object for collaborative interaction between the action and the
-     *         stream task.
-     *
+     *     stream task.
      * @throws Exception on any problems in the action.
      */
     protected void processInput(MailboxDefaultAction.Controller controller) throws Exception {
@@ -583,7 +575,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         checkState(
                 syncSavepointWithoutDrain == null
                         && (syncSavepointWithDrain == null
-                        || (isDrain && syncSavepointWithDrain == checkpointId)),
+                                || (isDrain && syncSavepointWithDrain == checkpointId)),
                 "at most one stop-with-savepoint checkpoint at a time is allowed");
         if (isDrain) {
             if (syncSavepointWithDrain == null) {
@@ -634,8 +626,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      *
      * <p>For tasks other than the source task, this method does nothing.
      */
-    protected void advanceToEndOfEventTime() throws Exception {
-    }
+    protected void advanceToEndOfEventTime() throws Exception {}
 
     /**
      * Instructs the task to go through its normal termination routine, i.e. exit the run-loop and
@@ -646,8 +637,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      *
      * <p>For tasks other than the source task, this method does nothing.
      */
-    protected void finishTask() throws Exception {
-    }
+    protected void finishTask() throws Exception {}
 
     // ------------------------------------------------------------------------
     //  Core work methods of the Stream Task
@@ -737,8 +727,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             throw new RuntimeException(e);
         }
         channelIOExecutor.shutdown();
-        channelIOExecutor = Executors.newSingleThreadExecutor(
-                new ExecutorThreadFactory("channel-state-unspilling"));
+        channelIOExecutor =
+                Executors.newSingleThreadExecutor(
+                        new ExecutorThreadFactory("channel-state-unspilling"));
 
         injectChannelStateWriterIntoRecoveredChannels();
 
@@ -771,11 +762,13 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                                 future.complete(null);
                             });
         }
-        CompletableFuture.allOf(recoverGateCompletionFutures).thenRun(() -> {
-            channelIOExecutor.shutdown();
-            isRunning = true;
-            recoverGateFuture.complete(null);
-        });
+        CompletableFuture.allOf(recoverGateCompletionFutures)
+                .thenRun(
+                        () -> {
+                            channelIOExecutor.shutdown();
+                            isRunning = true;
+                            recoverGateFuture.complete(null);
+                        });
     }
 
     private CompletableFuture<Void> restoreGates() throws Exception {
@@ -956,8 +949,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     private boolean areCheckpointsWithFinishedTasksEnabled() {
         return configuration
-                .getConfiguration()
-                .get(ExecutionCheckpointingOptions.ENABLE_CHECKPOINTS_AFTER_TASKS_FINISH)
+                        .getConfiguration()
+                        .get(ExecutionCheckpointingOptions.ENABLE_CHECKPOINTS_AFTER_TASKS_FINISH)
                 && configuration.isCheckpointingEnabled();
     }
 
@@ -1221,8 +1214,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             latestAsyncCheckpointStartDelayNanos =
                     1_000_000
                             * Math.max(
-                            0,
-                            System.currentTimeMillis() - checkpointMetaData.getTimestamp());
+                                    0,
+                                    System.currentTimeMillis() - checkpointMetaData.getTimestamp());
 
             // No alignment if we inject a checkpoint
             CheckpointMetricsBuilder checkpointMetrics =
@@ -1338,42 +1331,41 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                     }
                 }
             } else if (!environment
-                    .getJobVertex()
-                    .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())
+                            .getJobVertex()
+                            .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())
                     && !Objects.equals(
-                    environment.getJobVertex().getSnapshotGroup(),
-                    checkpointOptions.getSnapshotGroup())
+                            environment.getJobVertex().getSnapshotGroup(),
+                            checkpointOptions.getSnapshotGroup())
                     && !environment
-                    .getJobVertex()
-                    .isDownStreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) {
+                            .getJobVertex()
+                            .isDownStreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) {
                 // (cp.Snap!=null && !isDirectUpstream(cp.snap) && !snapEqual(cp.snap) &
                 // !idDownStreamOf(cp.snap))
 
-                //Do Nothing
+                // Do Nothing
             } else {
-                if (environment
-                        .getJobVertex().isInputVertex() && Objects.equals(
-                        environment.getJobVertex().getSnapshotGroup(),
-                        checkpointOptions.getSnapshotGroup())) { //source is included in snapshot group
+                if (environment.getJobVertex().isInputVertex()
+                        && Objects.equals(
+                                environment.getJobVertex().getSnapshotGroup(),
+                                checkpointOptions
+                                        .getSnapshotGroup())) { // source is included in snapshot
+                    // group
                     if (performCheckpoint(
-                            checkpointMetaData,
-                            checkpointOptions,
-                            checkpointMetrics)) {
+                            checkpointMetaData, checkpointOptions, checkpointMetrics)) {
                         if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
                             runSynchronousSavepointMailboxLoop();
                         }
                     }
                 } else if (environment
                         .getJobVertex()
-                        .isDirectUpstreamOfSnapshotGroup(checkpointOptions.getSnapshotGroup())) { //a direct upstream
+                        .isDirectUpstreamOfSnapshotGroup(
+                                checkpointOptions.getSnapshotGroup())) { // a direct upstream
                     // only send checkpoint barrier without recording own snapshot
                     sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
                 } else {
-                    //member of snapshot group
+                    // member of snapshot group
                     if (performCheckpoint(
-                            checkpointMetaData,
-                            checkpointOptions,
-                            checkpointMetrics)) {
+                            checkpointMetaData, checkpointOptions, checkpointMetrics)) {
                         if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
                             runSynchronousSavepointMailboxLoop();
                         }
@@ -1454,9 +1446,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                             this.finalCheckpointMinId = checkpointMetaData.getCheckpointId();
                         }
                         // ### suspend events consumption if the rescaled tasks are source operators
-                        if(checkpointOptions.isRescaling()){
-                            if(checkpointOptions.getBlockedJobIdsForRescaling().contains(environment.getJobID().toHexString()) &&
-                                this instanceof SourceStreamTask){
+                        if (checkpointOptions.isRescaling()) {
+                            if (checkpointOptions
+                                            .getBlockedJobIdsForRescaling()
+                                            .contains(environment.getJobID().toHexString())
+                                    && this instanceof SourceStreamTask) {
                                 mailboxProcessor.suspend();
                             }
                         }
@@ -1728,9 +1722,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     @VisibleForTesting
     public static <OUT>
-    RecordWriterDelegate<SerializationDelegate<StreamRecord<OUT>>>
-    createRecordWriterDelegate(
-            StreamConfig configuration, Environment environment) {
+            RecordWriterDelegate<SerializationDelegate<StreamRecord<OUT>>>
+                    createRecordWriterDelegate(
+                            StreamConfig configuration, Environment environment) {
         List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> recordWrites =
                 createRecordWriters(configuration, environment);
         if (recordWrites.size() == 1) {
@@ -1743,8 +1737,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     }
 
     private static <OUT>
-    List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> createRecordWriters(
-            StreamConfig configuration, Environment environment) {
+            List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> createRecordWriters(
+                    StreamConfig configuration, Environment environment) {
         List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> recordWriters =
                 new ArrayList<>();
         List<StreamEdge> outEdgesInOrder =
@@ -1926,12 +1920,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 csrw.getChannelSelector().setup(numberOfTargetChannels);
                 if (csrw.getChannelSelector() instanceof ForwardPartitioner
                         && this.environment.getTaskInfo().getNumberOfParallelSubtasks()
-                        != numberOfTargetChannels) {
+                                != numberOfTargetChannels) {
                     csrw.setChannelSelector(new RebalancePartitioner<Object>());
                     csrw.getChannelSelector().setup(numberOfTargetChannels);
                 }
             }
-
         }
     }
 }

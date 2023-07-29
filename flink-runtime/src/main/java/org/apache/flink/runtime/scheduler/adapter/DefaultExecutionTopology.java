@@ -18,12 +18,8 @@
 
 package org.apache.flink.runtime.scheduler.adapter;
 
-import org.apache.flink.runtime.JobException;
-import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.DefaultExecutionGraph;
 import org.apache.flink.runtime.executiongraph.EdgeManager;
-import org.apache.flink.runtime.executiongraph.Execution;
-import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
@@ -138,128 +134,153 @@ public class DefaultExecutionTopology implements SchedulingTopology {
     }
 
     /**
-     * Rescaling mechanisms:
-     *         A --> B (rescaled operator) --> C
-     *         a. trigger a global checkpoint
-     *         b. suspend process input in A after the checkpoint barrier sent by A
-     *         c. when the checkpoint completed, update execution graph and topology at Job Manager (step 1 below)
-     *         d. update result partitions of A (step 3 below)
-     *         e. cancel all tasks of B
-     *         f. re-partitions the states of B to its subtasks and restore their states
-     *         g. submit tasks B
-     *         h. update input channels of C (step 5 below)
-     *         i. resume process input in A (unblock channel)
+     * Rescaling mechanisms: A --> B (rescaled operator) --> C a. trigger a global checkpoint b.
+     * suspend process input in A after the checkpoint barrier sent by A c. when the checkpoint
+     * completed, update execution graph and topology at Job Manager (step 1 below) d. update result
+     * partitions of A (step 3 below) e. cancel all tasks of B f. re-partitions the states of B to
+     * its subtasks and restore their states g. submit tasks B h. update input channels of C (step 5
+     * below) i. resume process input in A (unblock channel)
+     *
      * @param rescaledJobIdHexString
      * @param newParallelism
      * @return
      */
     @Override
-    public void changeParallelism(String rescaledJobIdHexString, int newParallelism, String[] blockedJobIdsHexString) {
-        final ExecutionJobVertex rescaledEjv = executionGraph.getJobVertex(JobVertexID.fromHexString(rescaledJobIdHexString));
-        //1. update execution graph and topology at Job Manager
-        List<ExecutionVertex> newVertices = executionGraph.changeParallelism(rescaledEjv, newParallelism);
+    public void changeParallelism(
+            String rescaledJobIdHexString, int newParallelism, String[] blockedJobIdsHexString) {
+        final ExecutionJobVertex rescaledEjv =
+                executionGraph.getJobVertex(JobVertexID.fromHexString(rescaledJobIdHexString));
+        // 1. update execution graph and topology at Job Manager
+        List<ExecutionVertex> newVertices =
+                executionGraph.changeParallelism(rescaledEjv, newParallelism);
 
-        //add new vertices as new members of region
-        List<ExecutionVertexID> newVerticesID = newVertices.stream().map(ExecutionVertex::getID).collect(
-                Collectors.toList());
-        List<SchedulingExecutionVertex> newSchedulingExecutionVertices = new ArrayList<>(newVertices.size());
-        for(ExecutionVertexID id : newVerticesID){
+        // add new vertices as new members of region
+        List<ExecutionVertexID> newVerticesID =
+                newVertices.stream().map(ExecutionVertex::getID).collect(Collectors.toList());
+        List<SchedulingExecutionVertex> newSchedulingExecutionVertices =
+                new ArrayList<>(newVertices.size());
+        for (ExecutionVertexID id : newVerticesID) {
             newSchedulingExecutionVertices.add(executionVerticesById.get(id));
         }
-        PipelinedRegionSchedulingStrategy pipelinedRegionSchedulingStrategy = (PipelinedRegionSchedulingStrategy) schedulingStrategy;
-        for (SchedulingExecutionVertex vertex : newSchedulingExecutionVertices){
+        PipelinedRegionSchedulingStrategy pipelinedRegionSchedulingStrategy =
+                (PipelinedRegionSchedulingStrategy) schedulingStrategy;
+        for (SchedulingExecutionVertex vertex : newSchedulingExecutionVertices) {
             final SchedulingPipelinedRegion region =
                     this.getPipelinedRegionOfVertex(vertex.getId());
-            pipelinedRegionSchedulingStrategy.getRegionVerticesSorted().get(region).add(vertex.getId());
+            pipelinedRegionSchedulingStrategy
+                    .getRegionVerticesSorted()
+                    .get(region)
+                    .add(vertex.getId());
         }
 
-        List<CompletableFuture> subpartitionFutures= new ArrayList<>();
-        //3. also update result partitions of their upstreams
-        for(IntermediateResult ir : rescaledEjv.getInputs()){
-            for(ExecutionVertex vertex : ir.getProducer().getTaskVertices()){
+        List<CompletableFuture> subpartitionFutures = new ArrayList<>();
+        // 3. also update result partitions of their upstreams
+        for (IntermediateResult ir : rescaledEjv.getInputs()) {
+            for (ExecutionVertex vertex : ir.getProducer().getTaskVertices()) {
                 subpartitionFutures.add(vertex.updateSubpartitionParallelism());
             }
         }
 
-        final DefaultScheduler scheduler = (DefaultScheduler) pipelinedRegionSchedulingStrategy.getSchedulerOperations();
+        final DefaultScheduler scheduler =
+                (DefaultScheduler) pipelinedRegionSchedulingStrategy.getSchedulerOperations();
 
-        //request slot for newly created instances
+        // request slot for newly created instances
         scheduler.requestNewSlots(newSchedulingExecutionVertices);
 
-        //futures for waiting restarted tasks to be running
+        // futures for waiting restarted tasks to be running
         List<CompletableFuture> runningFutures = new ArrayList<>();
-        //schedule restart for rescaled tasks
+        // schedule restart for rescaled tasks
         Set<ExecutionVertexID> executionVertexIDS = new HashSet<>();
-        for(ExecutionVertex vertex : rescaledEjv.getTaskVertices()){
-                executionVertexIDS.add(vertex.getID());
-                vertex.startListenRunningFuture();
-                runningFutures.add(vertex.getRunningFuture());
+        for (ExecutionVertex vertex : rescaledEjv.getTaskVertices()) {
+            executionVertexIDS.add(vertex.getID());
+            vertex.startListenRunningFuture();
+            runningFutures.add(vertex.getRunningFuture());
         }
 
-        //also schedule restart for direct downstream tasks
-        Set<JobVertexID> downstreams = scheduleDownstreamRestart(rescaledEjv, executionVertexIDS, runningFutures);
+        // also schedule restart for direct downstream tasks
+        Set<JobVertexID> downstreams =
+                scheduleDownstreamRestart(rescaledEjv, executionVertexIDS, runningFutures);
 
-        //restart tasks
-        CompletableFuture.allOf(subpartitionFutures.toArray(
-                new CompletableFuture[0])).thenRun(() -> {
-                    scheduler.restartTasksForRescaling(executionVertexIDS);
-                });
+        // restart tasks
+        CompletableFuture.allOf(subpartitionFutures.toArray(new CompletableFuture[0]))
+                .thenRun(
+                        () -> {
+                            scheduler.restartTasksForRescaling(executionVertexIDS);
+                        });
 
-
-        CompletableFuture.allOf(runningFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
-            List<CompletableFuture> updateChannelFutures = new ArrayList<>();
-            Set<JobVertexID> sencondDownstreams = new HashSet<>();
-            // update input channels of their second downstreams
-            for(JobVertexID jobVertexID : downstreams) {
-                for (IntermediateDataSet producedDataSet : executionGraph.getJobVertex(jobVertexID)
-                        .getJobVertex()
-                        .getProducedDataSets()) {
-                    for (JobEdge outputEdge : producedDataSet.getConsumers()) {
-                        ExecutionJobVertex downstreamEjv = executionGraph.getJobVertex(outputEdge
-                                .getTarget()
-                                .getID());
-                        if(sencondDownstreams.add(downstreamEjv.getJobVertexId())){ //ensure unique vertex executed once
-                            //updateInputChannels
-                            for (ExecutionVertex vtx : downstreamEjv.getTaskVertices()) {
-                                updateChannelFutures.add(vtx
-                                        .getCurrentExecutionAttempt()
-                                        .updateInputChannels());
+        CompletableFuture.allOf(runningFutures.toArray(new CompletableFuture[0]))
+                .thenRun(
+                        () -> {
+                            List<CompletableFuture> updateChannelFutures = new ArrayList<>();
+                            Set<JobVertexID> sencondDownstreams = new HashSet<>();
+                            // update input channels of their second downstreams
+                            for (JobVertexID jobVertexID : downstreams) {
+                                for (IntermediateDataSet producedDataSet :
+                                        executionGraph
+                                                .getJobVertex(jobVertexID)
+                                                .getJobVertex()
+                                                .getProducedDataSets()) {
+                                    for (JobEdge outputEdge : producedDataSet.getConsumers()) {
+                                        ExecutionJobVertex downstreamEjv =
+                                                executionGraph.getJobVertex(
+                                                        outputEdge.getTarget().getID());
+                                        if (sencondDownstreams.add(
+                                                downstreamEjv.getJobVertexId())) { // ensure unique
+                                            // vertex executed
+                                            // once
+                                            // updateInputChannels
+                                            for (ExecutionVertex vtx :
+                                                    downstreamEjv.getTaskVertices()) {
+                                                updateChannelFutures.add(
+                                                        vtx.getCurrentExecutionAttempt()
+                                                                .updateInputChannels());
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                        }
-                    }
-                }
-            }
 
-            CompletableFuture.allOf(updateChannelFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
-                for (String blockedId : blockedJobIdsHexString){
-                    if(!blockedId.equals(rescaledJobIdHexString)) {
-                        for (ExecutionVertex vertex : executionGraph
-                                .getJobVertex(JobVertexID.fromHexString(blockedId))
-                                .getTaskVertices()) {
-                            vertex.getCurrentExecutionAttempt().unblockChannels();
-                        }
-                    }
-                }
-            });
-        });
+                            CompletableFuture.allOf(
+                                            updateChannelFutures.toArray(new CompletableFuture[0]))
+                                    .thenRun(
+                                            () -> {
+                                                for (String blockedId : blockedJobIdsHexString) {
+                                                    if (!blockedId.equals(rescaledJobIdHexString)) {
+                                                        for (ExecutionVertex vertex :
+                                                                executionGraph
+                                                                        .getJobVertex(
+                                                                                JobVertexID
+                                                                                        .fromHexString(
+                                                                                                blockedId))
+                                                                        .getTaskVertices()) {
+                                                            vertex.getCurrentExecutionAttempt()
+                                                                    .unblockChannels();
+                                                        }
+                                                    }
+                                                }
+                                            });
+                        });
     }
 
-    private Set<JobVertexID> scheduleDownstreamRestart(ExecutionJobVertex ejv, Set<ExecutionVertexID> executionVertexIDS, List<CompletableFuture> runningFutures){
+    private Set<JobVertexID> scheduleDownstreamRestart(
+            ExecutionJobVertex ejv,
+            Set<ExecutionVertexID> executionVertexIDS,
+            List<CompletableFuture> runningFutures) {
         Set<JobVertexID> downstreams = new HashSet<>();
         for (IntermediateDataSet producedDataSet : ejv.getJobVertex().getProducedDataSets()) {
             for (JobEdge outputEdge : producedDataSet.getConsumers()) {
-                ExecutionJobVertex downstreamEjv = executionGraph.getJobVertex(outputEdge
-                        .getTarget()
-                        .getID());
-                if(downstreams.add(downstreamEjv.getJobVertexId())){
+                ExecutionJobVertex downstreamEjv =
+                        executionGraph.getJobVertex(outputEdge.getTarget().getID());
+                if (downstreams.add(downstreamEjv.getJobVertexId())) {
                     for (ExecutionVertex vtx : downstreamEjv.getTaskVertices()) {
                         executionVertexIDS.add(vtx.getID());
                         vtx.startListenRunningFuture();
                         runningFutures.add(vtx.getRunningFuture());
                     }
                 }
-                //uncomment to restart all downstreams until sink
-//                scheduleDownstreamRestart(downstreamEjv,executionVertexIDS, runningFutures);
+                // uncomment to restart all downstreams until sink
+                //                scheduleDownstreamRestart(downstreamEjv,executionVertexIDS,
+                // runningFutures);
             }
         }
         return downstreams;
@@ -332,11 +353,12 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                 executionGraph);
     }
 
-    public List<SchedulingExecutionVertex> addExecutionVertices(ExecutionVertexID sibling, List<ExecutionVertex> newExecutionVertices){
+    public List<SchedulingExecutionVertex> addExecutionVertices(
+            ExecutionVertexID sibling, List<ExecutionVertex> newExecutionVertices) {
         Map<ExecutionVertexID, DefaultExecutionVertex> newVertices = new HashMap<>();
         DefaultSchedulingPipelinedRegion pipelinedRegion = this.getPipelinedRegionOfVertex(sibling);
         // computeExecutionGraphIndex and computePipelinedRegions
-        for(ExecutionVertex vertex : newExecutionVertices){
+        for (ExecutionVertex vertex : newExecutionVertices) {
             List<DefaultResultPartition> producedPartitions =
                     generateProducedSchedulingResultPartition(
                             vertex.getProducedPartitions(),
@@ -353,12 +375,12 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                             resultPartitionsById::get);
             executionVerticesById.put(schedulingVertex.getId(), schedulingVertex);
             executionVerticesList.add(schedulingVertex);
-            pipelinedRegionsByVertex.put(schedulingVertex.getId(), pipelinedRegion); // in computePipelinedRegions
+            pipelinedRegionsByVertex.put(
+                    schedulingVertex.getId(), pipelinedRegion); // in computePipelinedRegions
             newVertices.put(vertex.getID(), schedulingVertex);
         }
         pipelinedRegion.addVertices(newVertices); // in computePipelinedRegions
         return newVertices.values().stream().collect(Collectors.toList());
-
     }
 
     private static ExecutionGraphIndex computeExecutionGraphIndex(

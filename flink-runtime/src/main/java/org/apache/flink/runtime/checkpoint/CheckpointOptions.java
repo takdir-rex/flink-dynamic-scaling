@@ -305,15 +305,15 @@ public class CheckpointOptions implements Serializable {
         return unaligned(targetLocation);
     }
 
-    public boolean isRescaling(){
-        if(getSnapshotGroup() != null){
+    public boolean isRescaling() {
+        if (getSnapshotGroup() != null) {
             return getSnapshotGroup().startsWith("rescale-");
         }
         return false;
     }
 
-    public Set<String> getBlockedJobIdsForRescaling(){
-        if(!isRescaling()){
+    public Set<String> getBlockedJobIdsForRescaling() {
+        if (!isRescaling()) {
             return new HashSet<>();
         }
         // after "rescale-<rescaled_job_id>:"

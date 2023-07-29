@@ -96,7 +96,8 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
     }
 
     public void requestNewSlotsAndDeploy(List<SchedulingExecutionVertex> vertices) {
-        LocalInputPreferredSlotSharingStrategy strategy = (LocalInputPreferredSlotSharingStrategy) slotSharingStrategy;
+        LocalInputPreferredSlotSharingStrategy strategy =
+                (LocalInputPreferredSlotSharingStrategy) slotSharingStrategy;
         strategy.requestNewSlotsAndDeploy(vertices);
     }
 

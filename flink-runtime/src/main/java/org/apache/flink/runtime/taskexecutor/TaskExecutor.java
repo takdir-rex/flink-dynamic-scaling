@@ -774,7 +774,9 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     @Override
     public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
-            ExecutionAttemptID executionAttemptID, Map<IntermediateResultPartitionID, Integer> partitionDescriptors, Time timeout) {
+            ExecutionAttemptID executionAttemptID,
+            Map<IntermediateResultPartitionID, Integer> partitionDescriptors,
+            Time timeout) {
         final Task task = taskSlotTable.getTask(executionAttemptID);
 
         if (task != null) {
@@ -799,15 +801,19 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     @Override
     public CompletableFuture<Acknowledge> updateInputChannels(
-            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, Time timeout) {
+            ExecutionAttemptID executionAttemptID,
+            List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors,
+            Time timeout) {
         final Task task = taskSlotTable.getTask(executionAttemptID);
 
         if (task != null) {
             try {
                 final CompletableFuture<Acknowledge> ackFuture = new CompletableFuture<>();
-                task.updateInputChannels(inputGateDeploymentDescriptors).thenRun(() -> {
-                    ackFuture.complete(Acknowledge.get());
-                });
+                task.updateInputChannels(inputGateDeploymentDescriptors)
+                        .thenRun(
+                                () -> {
+                                    ackFuture.complete(Acknowledge.get());
+                                });
                 return ackFuture;
             } catch (Throwable t) {
                 return FutureUtils.completedExceptionally(
@@ -837,7 +843,10 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             } catch (Throwable t) {
                 return FutureUtils.completedExceptionally(
                         new TaskException(
-                                "Cannot unblock task channel for execution " + executionAttemptID + '.', t));
+                                "Cannot unblock task channel for execution "
+                                        + executionAttemptID
+                                        + '.',
+                                t));
             }
         } else {
             final String message =

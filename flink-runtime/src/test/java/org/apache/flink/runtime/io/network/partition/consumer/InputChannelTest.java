@@ -155,7 +155,7 @@ public class InputChannelTest {
         }
 
         @Override
-        void releaseAllResources() throws IOException {}
+        public void releaseAllResources() throws IOException {}
 
         @Override
         void announceBufferSize(int newBufferSize) {}

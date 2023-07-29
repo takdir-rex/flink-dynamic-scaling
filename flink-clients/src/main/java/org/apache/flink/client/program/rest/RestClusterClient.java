@@ -491,32 +491,42 @@ public class RestClusterClient<T> implements ClusterClient<T> {
     }
 
     @Override
-    public CompletableFuture<Acknowledge> rescale(JobID jobId, String jobVertexId, int newParallelism) {
+    public CompletableFuture<Acknowledge> rescale(
+            JobID jobId, String jobVertexId, int newParallelism) {
 
-        final RescalingTriggerHeaders rescalingTriggerHeaders = RescalingTriggerHeaders.getInstance();
-        final RescalingTriggerMessageParameters rescalingTriggerMessageParameters = rescalingTriggerHeaders.getUnresolvedMessageParameters();
+        final RescalingTriggerHeaders rescalingTriggerHeaders =
+                RescalingTriggerHeaders.getInstance();
+        final RescalingTriggerMessageParameters rescalingTriggerMessageParameters =
+                rescalingTriggerHeaders.getUnresolvedMessageParameters();
         rescalingTriggerMessageParameters.jobPathParameter.resolve(jobId);
-        rescalingTriggerMessageParameters.rescalingVertexQueryParameter.resolve(Collections.singletonList(jobVertexId));
-        rescalingTriggerMessageParameters.rescalingParallelismQueryParameter.resolve(Collections.singletonList(newParallelism));
+        rescalingTriggerMessageParameters.rescalingVertexQueryParameter.resolve(
+                Collections.singletonList(jobVertexId));
+        rescalingTriggerMessageParameters.rescalingParallelismQueryParameter.resolve(
+                Collections.singletonList(newParallelism));
 
-        final CompletableFuture<TriggerResponse> rescalingTriggerResponseFuture = sendRequest(
-                rescalingTriggerHeaders,
-                rescalingTriggerMessageParameters);
+        final CompletableFuture<TriggerResponse> rescalingTriggerResponseFuture =
+                sendRequest(rescalingTriggerHeaders, rescalingTriggerMessageParameters);
 
-        final CompletableFuture<AsynchronousOperationInfo> rescalingOperationFuture = rescalingTriggerResponseFuture.thenCompose(
-                (TriggerResponse triggerResponse) -> {
-                    final TriggerId triggerId = triggerResponse.getTriggerId();
-                    final RescalingStatusHeaders rescalingStatusHeaders = RescalingStatusHeaders.getInstance();
-                    final RescalingStatusMessageParameters rescalingStatusMessageParameters = rescalingStatusHeaders.getUnresolvedMessageParameters();
+        final CompletableFuture<AsynchronousOperationInfo> rescalingOperationFuture =
+                rescalingTriggerResponseFuture.thenCompose(
+                        (TriggerResponse triggerResponse) -> {
+                            final TriggerId triggerId = triggerResponse.getTriggerId();
+                            final RescalingStatusHeaders rescalingStatusHeaders =
+                                    RescalingStatusHeaders.getInstance();
+                            final RescalingStatusMessageParameters
+                                    rescalingStatusMessageParameters =
+                                            rescalingStatusHeaders.getUnresolvedMessageParameters();
 
-                    rescalingStatusMessageParameters.jobPathParameter.resolve(jobId);
-                    rescalingStatusMessageParameters.triggerIdPathParameter.resolve(triggerId);
+                            rescalingStatusMessageParameters.jobPathParameter.resolve(jobId);
+                            rescalingStatusMessageParameters.triggerIdPathParameter.resolve(
+                                    triggerId);
 
-                    return pollResourceAsync(
-                            () -> sendRequest(
-                                    rescalingStatusHeaders,
-                                    rescalingStatusMessageParameters));
-                });
+                            return pollResourceAsync(
+                                    () ->
+                                            sendRequest(
+                                                    rescalingStatusHeaders,
+                                                    rescalingStatusMessageParameters));
+                        });
 
         return rescalingOperationFuture.thenApply(
                 (AsynchronousOperationInfo asynchronousOperationInfo) -> {

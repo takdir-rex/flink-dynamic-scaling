@@ -114,7 +114,7 @@ public class RestartPipelinedRegionFailoverStrategy implements FailoverStrategy 
             ExecutionVertexID executionVertexId, Throwable cause) {
         LOG.info("Calculating tasks to restart to recover the failed task {}.", executionVertexId);
 
-//        topology.changeParallelism(executionVertexId.getJobVertexId(), 2);
+        //        topology.changeParallelism(executionVertexId.getJobVertexId(), 2);
 
         try {
             Thread.sleep(7000);

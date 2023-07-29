@@ -17,8 +17,6 @@
 
 package org.apache.flink.streaming.runtime.partitioner;
 
-import com.esotericsoftware.minlog.Log;
-
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.runtime.io.network.api.writer.SubtaskStateMapper;

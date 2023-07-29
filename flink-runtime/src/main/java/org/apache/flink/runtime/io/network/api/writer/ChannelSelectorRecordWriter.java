@@ -74,7 +74,7 @@ public final class ChannelSelectorRecordWriter<T extends IOReadableWritable>
         }
     }
 
-    public int reloadNumberOfChannels(){
+    public int reloadNumberOfChannels() {
         super.reloadNumberOfChannels();
         return numberOfChannels;
     }

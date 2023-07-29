@@ -524,7 +524,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         }
 
         @Override
-        public JobVertex getJobVertex(){
+        public JobVertex getJobVertex() {
             return subTaskCheckpointCoordinator.getJobVertex();
         }
     }

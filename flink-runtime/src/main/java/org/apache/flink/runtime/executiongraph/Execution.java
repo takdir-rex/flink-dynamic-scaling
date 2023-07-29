@@ -196,7 +196,7 @@ public class Execution
             int attemptNumber,
             long startTimestamp,
             Time rpcTimeout) {
-        this(executor, vertex, attemptNumber,startTimestamp, rpcTimeout, new ExecutionAttemptID());
+        this(executor, vertex, attemptNumber, startTimestamp, rpcTimeout, new ExecutionAttemptID());
     }
 
     /**
@@ -1277,14 +1277,17 @@ public class Execution
         }
     }
 
-    public CompletableFuture<Void> updateSubpartitionParallelism(Map<IntermediateResultPartitionID, Integer> partitionDescriptors) {
+    public CompletableFuture<Void> updateSubpartitionParallelism(
+            Map<IntermediateResultPartitionID, Integer> partitionDescriptors) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         assertRunningInJobMasterMainThread();
         final LogicalSlot slot = assignedResource;
         if (slot != null) {
             final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 
-            CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateSubpartitionParallelism(attemptId, partitionDescriptors, rpcTimeout);
+            CompletableFuture<Acknowledge> resultFuture =
+                    taskManagerGateway.updateSubpartitionParallelism(
+                            attemptId, partitionDescriptors, rpcTimeout);
 
             resultFuture.whenComplete(
                     (ack, failure) -> {
@@ -1317,7 +1320,9 @@ public class Execution
 
                 final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 
-                CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.updateInputChannels(attemptId, inputGateDeploymentDescriptors, rpcTimeout);
+                CompletableFuture<Acknowledge> resultFuture =
+                        taskManagerGateway.updateInputChannels(
+                                attemptId, inputGateDeploymentDescriptors, rpcTimeout);
 
                 resultFuture.whenComplete(
                         (ack, failure) -> {
@@ -1350,12 +1355,15 @@ public class Execution
 
                 final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 
-                CompletableFuture<Acknowledge> resultFuture = taskManagerGateway.unblockChannels(attemptId, rpcTimeout);
+                CompletableFuture<Acknowledge> resultFuture =
+                        taskManagerGateway.unblockChannels(attemptId, rpcTimeout);
 
                 resultFuture.whenComplete(
                         (ack, failure) -> {
                             if (failure != null) {
-                                fail(new Exception("Task channels could not be unblocked.", failure));
+                                fail(
+                                        new Exception(
+                                                "Task channels could not be unblocked.", failure));
                             }
                         });
 

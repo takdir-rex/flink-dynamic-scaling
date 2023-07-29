@@ -37,5 +37,4 @@ public class PipelinedApproximateSubpartitionView extends PipelinedSubpartitionV
     public void releaseAllResources() {
         isReleased.compareAndSet(false, true);
     }
-
 }

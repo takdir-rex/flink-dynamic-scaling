@@ -17,9 +17,7 @@
  */
 package org.apache.flink.runtime.inflightlogging;
 
-import org.apache.flink.api.common.state.CheckpointListener;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
-import org.apache.flink.runtime.io.network.buffer.BufferPool;
 
 /**
  * An InFlightLog records {@link Buffer} instances which have been sent to other tasks. The
@@ -42,5 +40,4 @@ public interface InFlightLog {
     InFlightLogIterator<Buffer> getInFlightIterator(long epochID, int ignoreBuffers);
 
     void close();
-
 }

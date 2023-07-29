@@ -332,8 +332,9 @@ class LocalBufferPool implements BufferPool {
         }
 
         int oldSize = subpartitionBufferRecyclers.length;
-        if(targetChannel >= oldSize){
-            subpartitionBufferRecyclers = Arrays.copyOf(subpartitionBufferRecyclers, targetChannel + 1);
+        if (targetChannel >= oldSize) {
+            subpartitionBufferRecyclers =
+                    Arrays.copyOf(subpartitionBufferRecyclers, targetChannel + 1);
             for (int i = oldSize; i < targetChannel + 1; i++) {
                 subpartitionBufferRecyclers[i] = new SubpartitionBufferRecycler(i, this);
             }
@@ -369,8 +370,9 @@ class LocalBufferPool implements BufferPool {
                 throw new IllegalStateException("Buffer pool is destroyed.");
             }
 
-            if(targetChannel >= subpartitionBuffersCount.length){
-                subpartitionBuffersCount = Arrays.copyOf(subpartitionBuffersCount, targetChannel + 1);
+            if (targetChannel >= subpartitionBuffersCount.length) {
+                subpartitionBuffersCount =
+                        Arrays.copyOf(subpartitionBuffersCount, targetChannel + 1);
             }
 
             // target channel over quota; do not return a segment

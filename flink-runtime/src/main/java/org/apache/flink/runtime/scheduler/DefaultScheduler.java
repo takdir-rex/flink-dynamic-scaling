@@ -285,7 +285,8 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         }
     }
 
-    public ScheduledFuture<?> restartTasksForRescaling(final Set<ExecutionVertexID> verticesToRestart){
+    public ScheduledFuture<?> restartTasksForRescaling(
+            final Set<ExecutionVertexID> verticesToRestart) {
         final Set<ExecutionVertexVersion> executionVertexVersions =
                 new HashSet<>(
                         executionVertexVersioner
@@ -456,11 +457,10 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
     }
 
     public void requestNewSlots(List<SchedulingExecutionVertex> vertices) {
-        SlotSharingExecutionSlotAllocator slotAllocator = (SlotSharingExecutionSlotAllocator) executionSlotAllocator;
+        SlotSharingExecutionSlotAllocator slotAllocator =
+                (SlotSharingExecutionSlotAllocator) executionSlotAllocator;
         slotAllocator.requestNewSlotsAndDeploy(vertices);
     }
-
-
 
     private void validateDeploymentOptions(
             final Collection<ExecutionVertexDeploymentOption> deploymentOptions) {

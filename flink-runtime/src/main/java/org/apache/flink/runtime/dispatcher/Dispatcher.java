@@ -684,10 +684,7 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
             final Time timeout) {
 
         return performOperationOnJobMasterGateway(
-                jobId,
-                gateway ->
-                        gateway.rescale(
-                                jobVertexId, newParallelism, timeout));
+                jobId, gateway -> gateway.rescale(jobVertexId, newParallelism, timeout));
     }
 
     @Override

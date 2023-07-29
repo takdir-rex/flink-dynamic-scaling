@@ -405,7 +405,8 @@ public class TestingJobMasterGateway implements JobMasterGateway {
     }
 
     @Override
-    public CompletableFuture<Acknowledge> rescale(final String jobVertexId, final int newParallelism, final Time timeout){
+    public CompletableFuture<Acknowledge> rescale(
+            final String jobVertexId, final int newParallelism, final Time timeout) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 

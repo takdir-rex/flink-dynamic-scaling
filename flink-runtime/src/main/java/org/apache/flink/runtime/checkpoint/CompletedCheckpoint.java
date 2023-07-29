@@ -111,8 +111,7 @@ public class CompletedCheckpoint implements Serializable, Checkpoint {
 
     // ------------------------------------------------------------------------
 
-
-   public CompletedCheckpoint(
+    public CompletedCheckpoint(
             JobID job,
             long checkpointID,
             long timestamp,
@@ -121,7 +120,16 @@ public class CompletedCheckpoint implements Serializable, Checkpoint {
             @Nullable Collection<MasterState> masterHookStates,
             CheckpointProperties props,
             CompletedCheckpointStorageLocation storageLocation) {
-        this(job, checkpointID,timestamp, completionTimestamp, operatorStates, masterHookStates, props, storageLocation, null);
+        this(
+                job,
+                checkpointID,
+                timestamp,
+                completionTimestamp,
+                operatorStates,
+                masterHookStates,
+                props,
+                storageLocation,
+                null);
     }
 
     public CompletedCheckpoint(

@@ -26,7 +26,6 @@
 package org.apache.flink.runtime.inflightlogging;
 
 import org.apache.flink.runtime.io.network.buffer.Buffer;
-import org.apache.flink.runtime.io.network.buffer.BufferPool;
 
 public class NoOpInFlightLog implements InFlightLog {
 

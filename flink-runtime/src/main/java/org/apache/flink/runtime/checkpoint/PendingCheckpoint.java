@@ -67,37 +67,38 @@ import static org.apache.flink.util.Preconditions.checkState;
 public class PendingCheckpoint implements Checkpoint {
 
     public String getSnapshotGroup() {
-        if(isRescaling()){
+        if (isRescaling()) {
             return null;
         }
         return snapshotGroup;
     }
 
-    public boolean isRescaling(){
-        if(snapshotGroup != null){
+    public boolean isRescaling() {
+        if (snapshotGroup != null) {
             return snapshotGroup.startsWith("rescale-");
         }
         return false;
     }
 
-    public String getRescaledJobIdHexString(){
-        if(isRescaling()){
-            return snapshotGroup.substring(snapshotGroup.indexOf("-") + 1, snapshotGroup.indexOf("="));
+    public String getRescaledJobIdHexString() {
+        if (isRescaling()) {
+            return snapshotGroup.substring(
+                    snapshotGroup.indexOf("-") + 1, snapshotGroup.indexOf("="));
         }
         return null;
     }
 
-    public Integer getRescaledNewParallelism(){
-        if(isRescaling()) {
-            return Integer.valueOf(snapshotGroup.substring(
-                    snapshotGroup.indexOf("=") + 1,
-                    snapshotGroup.indexOf(":")));
+    public Integer getRescaledNewParallelism() {
+        if (isRescaling()) {
+            return Integer.valueOf(
+                    snapshotGroup.substring(
+                            snapshotGroup.indexOf("=") + 1, snapshotGroup.indexOf(":")));
         }
         return null;
     }
 
-    public String[] getBlockedJobIdsHexString(){
-        if(isRescaling()){
+    public String[] getBlockedJobIdsHexString() {
+        if (isRescaling()) {
             return snapshotGroup.substring(snapshotGroup.indexOf(":") + 1).split(",");
         }
         return null;

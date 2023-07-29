@@ -261,8 +261,8 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
         return targetPartition;
     }
 
-    public int reloadNumberOfChannels(){
+    public int reloadNumberOfChannels() {
         this.numberOfChannels = targetPartition.getNumberOfSubpartitions();
-        return numberOfChannels
-;    }
+        return numberOfChannels;
+    }
 }

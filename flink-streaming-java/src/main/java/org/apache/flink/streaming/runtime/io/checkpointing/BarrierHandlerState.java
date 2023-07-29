@@ -77,6 +77,5 @@ interface BarrierHandlerState {
         boolean isTimedOut(CheckpointBarrier barrier);
 
         JobVertex getJobVertex();
-
     }
 }

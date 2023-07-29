@@ -132,10 +132,7 @@ public interface RestfulGateway extends RpcGateway {
             requestTaskManagerMetricQueryServiceAddresses(@RpcTimeout Time timeout);
 
     default CompletableFuture<Acknowledge> rescale(
-            JobID jobId,
-            String jobVertexId,
-            int newParallelism,
-            @RpcTimeout Time timeout) {
+            JobID jobId, String jobVertexId, int newParallelism, @RpcTimeout Time timeout) {
         throw new UnsupportedOperationException();
     }
 

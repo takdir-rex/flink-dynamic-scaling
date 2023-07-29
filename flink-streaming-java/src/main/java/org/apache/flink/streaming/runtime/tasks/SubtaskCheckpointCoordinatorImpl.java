@@ -704,7 +704,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
     }
 
     @Override
-    public JobVertex getJobVertex(){
+    public JobVertex getJobVertex() {
         return env.getJobVertex();
     }
 }

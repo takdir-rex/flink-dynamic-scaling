@@ -146,14 +146,14 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
         jobVerticesInTopologyOrder.clear();
         sourceTasks.clear();
         jobVerticesInTopologyOrderIterable.forEach(
-            jobVertex -> {
-                jobVerticesInTopologyOrder.add(jobVertex);
-                allTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                jobVertex -> {
+                    jobVerticesInTopologyOrder.add(jobVertex);
+                    allTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
 
-                if (jobVertex.getJobVertex().isInputVertex()) {
-                    sourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
-                }
-            });
+                    if (jobVertex.getJobVertex().isInputVertex()) {
+                        sourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                    }
+                });
         for (ExecutionVertex task : allTasks) {
             if (task.getCurrentExecutionAttempt() == null) {
                 throw new CheckpointException(
@@ -212,7 +212,8 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
         List<ExecutionVertex> targetedSourceTasks = new ArrayList<>();
 
         for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
-            if(jobVertex.getJobVertex().isInputVertex() && Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)){
+            if (jobVertex.getJobVertex().isInputVertex()
+                    && Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)) {
                 targetedSourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
             }
             if (Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)

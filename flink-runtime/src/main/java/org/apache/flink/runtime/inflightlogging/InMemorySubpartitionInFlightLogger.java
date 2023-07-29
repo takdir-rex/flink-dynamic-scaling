@@ -66,7 +66,7 @@ public class InMemorySubpartitionInFlightLogger implements InFlightLog {
     public synchronized void close() {
         for (List<Buffer> epoch : slicedLog.values()) {
             for (Buffer b : epoch) {
-                while (!b.isRecycled()){
+                while (!b.isRecycled()) {
                     b.recycleBuffer();
                 }
             }

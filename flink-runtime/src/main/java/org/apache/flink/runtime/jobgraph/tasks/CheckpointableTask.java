@@ -98,5 +98,4 @@ public interface CheckpointableTask {
      * @param cause The reason why the checkpoint was aborted during alignment
      */
     void abortCheckpointOnBarrier(long checkpointId, CheckpointException cause) throws IOException;
-
 }

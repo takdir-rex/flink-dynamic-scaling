@@ -65,8 +65,20 @@ public class WindowJoin2b {
                 "To customize example, use: WindowJoin [--windowSize <window-size-in-millis>] [--rate <elements-per-second>]");
 
         Configuration conf = new Configuration();
-        final File checkpointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "checkpoint");
-        final File savepointDir = new File(System.getProperty("user.home") + File.separator + "tmp" + File.separator + "savepoint");
+        final File checkpointDir =
+                new File(
+                        System.getProperty("user.home")
+                                + File.separator
+                                + "tmp"
+                                + File.separator
+                                + "checkpoint");
+        final File savepointDir =
+                new File(
+                        System.getProperty("user.home")
+                                + File.separator
+                                + "tmp"
+                                + File.separator
+                                + "savepoint");
 
         conf.setString(StateBackendOptions.STATE_BACKEND, "filesystem");
         conf.setString(
@@ -113,22 +125,18 @@ public class WindowJoin2b {
         DataStream<Tuple3<String, Integer, Integer>> joinedStream =
                 runWindowJoin(grades, salaries, windowSize);
 
-        ((SingleOutputStreamOperator) joinedStream)
-                .uid("join")
-                .name("Join");
+        ((SingleOutputStreamOperator) joinedStream).uid("join").name("Join");
 
         DataStream<Tuple3<String, Integer, Integer>> joinedStream2 =
                 runWindowJoin(grades, salaries, windowSize);
 
-        ((SingleOutputStreamOperator) joinedStream2)
-                .uid("join1")
-                .name("Join2");
+        ((SingleOutputStreamOperator) joinedStream2).uid("join1").name("Join2");
 
         // print the results with a single thread, rather than in parallel
         joinedStream.addSink(new FailingSink<>()).setParallelism(1).uid("Sink").name("Sink");
         joinedStream2.addSink(new DiscardingSink<>()).setParallelism(1).uid("Sink2").name("Sink2");
 
-//                System.out.println(env.getExecutionPlan());
+        //                System.out.println(env.getExecutionPlan());
 
         // execute program
         env.execute("Windowed Join Example");

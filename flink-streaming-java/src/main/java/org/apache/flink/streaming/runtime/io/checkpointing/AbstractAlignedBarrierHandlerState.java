@@ -23,10 +23,6 @@ import org.apache.flink.runtime.checkpoint.channel.InputChannelInfo;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
 import static org.apache.flink.util.Preconditions.checkState;
 
@@ -77,11 +73,14 @@ abstract class AbstractAlignedBarrierHandlerState implements BarrierHandlerState
             Controller controller, CheckpointBarrier checkpointBarrier) throws IOException {
         controller.triggerGlobalCheckpoint(checkpointBarrier);
         boolean unblockChannels = true;
-        if(checkpointBarrier.getCheckpointOptions().getBlockedJobIdsForRescaling().contains(controller.getJobVertex().getID().toHexString())){
+        if (checkpointBarrier
+                .getCheckpointOptions()
+                .getBlockedJobIdsForRescaling()
+                .contains(controller.getJobVertex().getID().toHexString())) {
             unblockChannels = false;
         }
 
-        if(unblockChannels){
+        if (unblockChannels) {
             state.unblockAllChannels();
         }
         return new WaitingForFirstBarrier(state.getInputs());
@@ -94,5 +93,4 @@ abstract class AbstractAlignedBarrierHandlerState implements BarrierHandlerState
         state.unblockAllChannels();
         return new WaitingForFirstBarrier(state.getInputs());
     }
-
 }

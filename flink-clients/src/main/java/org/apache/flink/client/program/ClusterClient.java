@@ -156,7 +156,8 @@ public interface ClusterClient<T> extends AutoCloseable {
             final boolean advanceToEndOfEventTime,
             @Nullable final String savepointDirectory);
 
-    default CompletableFuture<Acknowledge> rescale(JobID jobId, String jobVertexId, int newParallelism){
+    default CompletableFuture<Acknowledge> rescale(
+            JobID jobId, String jobVertexId, int newParallelism) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 

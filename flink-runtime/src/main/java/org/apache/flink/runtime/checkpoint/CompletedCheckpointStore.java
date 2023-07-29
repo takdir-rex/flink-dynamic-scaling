@@ -60,14 +60,15 @@ public interface CompletedCheckpointStore {
         for (int i = allCheckpoints.size() - 1; i >= 0; i--) {
             CompletedCheckpoint checkpoint = allCheckpoints.get(i);
             String sg = checkpoint.getSnapshotGroup();
-            if (sg == null) { //can be used by any region
+            if (sg == null) { // can be used by any region
                 return checkpoint;
             }
-            if(snapshotGroup == null){ //need global checkpoint
+            if (snapshotGroup == null) { // need global checkpoint
                 continue;
             }
-            int sgNum = Integer.valueOf(snapshotGroup.substring(snapshotGroup.lastIndexOf("-")+1));
-            int sgNumCp = Integer.valueOf(sg.substring(sg.lastIndexOf("-")+1));
+            int sgNum =
+                    Integer.valueOf(snapshotGroup.substring(snapshotGroup.lastIndexOf("-") + 1));
+            int sgNumCp = Integer.valueOf(sg.substring(sg.lastIndexOf("-") + 1));
             if (sgNumCp <= sgNum) {
                 return checkpoint;
             }

@@ -553,7 +553,7 @@ public class CheckpointCoordinator {
             if (request.snapshotGroup == null) {
                 checkpointPlanFuture = checkpointPlanCalculator.calculateCheckpointPlan();
             } else if (request.snapshotGroup.startsWith("rescale-")) {
-                //checkpoint before for rescaling
+                // checkpoint before for rescaling
                 checkpointPlanFuture = checkpointPlanCalculator.calculateCheckpointPlan();
             } else {
                 checkpointPlanFuture =
@@ -1332,8 +1332,8 @@ public class CheckpointCoordinator {
                 checkpointId,
                 completedCheckpoint.getTimestamp());
 
-        if(pendingCheckpoint.isRescaling()) {
-            //trigger rescaling
+        if (pendingCheckpoint.isRescaling()) {
+            // trigger rescaling
             schedulingTopology.changeParallelism(
                     pendingCheckpoint.getRescaledJobIdHexString(),
                     pendingCheckpoint.getRescaledNewParallelism(),
@@ -1569,13 +1569,13 @@ public class CheckpointCoordinator {
             int min = Integer.MAX_VALUE;
             for (ExecutionJobVertex executionJobVertex : tasks) {
                 String sg = executionJobVertex.getSnapshotGroup();
-                if(sg == null){
+                if (sg == null) {
                     snapshotGroup = null;
                     break;
                 }
-                if(!sg.isEmpty()){
+                if (!sg.isEmpty()) {
                     int sgNum = Integer.valueOf(sg.substring(sg.lastIndexOf("-") + 1));
-                    if(sgNum < min){
+                    if (sgNum < min) {
                         min = sgNum;
                         snapshotGroup = sg;
                     }

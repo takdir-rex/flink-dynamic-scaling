@@ -65,13 +65,19 @@ public class RpcTaskManagerGateway implements TaskManagerGateway {
     }
 
     public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
-            ExecutionAttemptID executionAttemptID, Map<IntermediateResultPartitionID, Integer> partitionDescriptors, Time timeout) {
-        return taskExecutorGateway.updateSubpartitionParallelism(executionAttemptID, partitionDescriptors, timeout);
+            ExecutionAttemptID executionAttemptID,
+            Map<IntermediateResultPartitionID, Integer> partitionDescriptors,
+            Time timeout) {
+        return taskExecutorGateway.updateSubpartitionParallelism(
+                executionAttemptID, partitionDescriptors, timeout);
     }
 
     public CompletableFuture<Acknowledge> updateInputChannels(
-            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, Time timeout) {
-        return taskExecutorGateway.updateInputChannels(executionAttemptID, inputGateDeploymentDescriptors, timeout);
+            ExecutionAttemptID executionAttemptID,
+            List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors,
+            Time timeout) {
+        return taskExecutorGateway.updateInputChannels(
+                executionAttemptID, inputGateDeploymentDescriptors, timeout);
     }
 
     @Override

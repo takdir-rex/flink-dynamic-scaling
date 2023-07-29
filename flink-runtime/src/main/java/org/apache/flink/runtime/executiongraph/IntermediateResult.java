@@ -76,7 +76,7 @@ public class IntermediateResult {
         checkArgument(numParallelProducers >= 1);
         this.numParallelProducers = numParallelProducers;
 
-        //initiate spaces for partitions array
+        // initiate spaces for partitions array
         this.partitions = new ArrayList<>(numParallelProducers);
         for (int i = 0; i < numParallelProducers; i++) {
             this.partitions.add(null);
@@ -93,16 +93,15 @@ public class IntermediateResult {
         this.shuffleDescriptorCache = new HashMap<>();
     }
 
-    public void increaseParallelism(){
+    public void increaseParallelism() {
         this.numParallelProducers++;
         this.partitions.add(null);
-
     }
 
-    public void decreaseParallelism(){
+    public void decreaseParallelism() {
         this.numParallelProducers--;
-        //remove last partitions
-        int partitionNumber = this.partitions.size()-1;
+        // remove last partitions
+        int partitionNumber = this.partitions.size() - 1;
         IntermediateResultPartition removedPartition = this.partitions.remove(partitionNumber);
         partitionLookupHelper.remove(removedPartition.getPartitionId());
         partitionsAssigned--;
@@ -113,10 +112,11 @@ public class IntermediateResult {
             throw new IllegalArgumentException();
         }
 
-        //dynamically expand the number of partitions (when change parallelism is called at runtime)
-        if(partitionNumber >= numParallelProducers){
+        // dynamically expand the number of partitions (when change parallelism is called at
+        // runtime)
+        if (partitionNumber >= numParallelProducers) {
             numParallelProducers = partitionNumber + 1;
-            while (this.partitions.size() != numParallelProducers){
+            while (this.partitions.size() != numParallelProducers) {
                 this.partitions.add(null);
             }
         }

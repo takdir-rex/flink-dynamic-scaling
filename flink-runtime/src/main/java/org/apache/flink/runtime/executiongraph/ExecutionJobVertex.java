@@ -35,10 +35,8 @@ import org.apache.flink.runtime.blob.BlobWriter;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.execution.ExecutionState;
-import org.apache.flink.runtime.jobgraph.DistributionPattern;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
-import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
@@ -47,8 +45,6 @@ import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 import org.apache.flink.runtime.operators.coordination.OperatorCoordinator;
 import org.apache.flink.runtime.operators.coordination.OperatorCoordinatorHolder;
 import org.apache.flink.runtime.scheduler.VertexParallelismInformation;
-import org.apache.flink.runtime.scheduler.strategy.ConsumedPartitionGroup;
-import org.apache.flink.runtime.scheduler.strategy.ConsumerVertexGroup;
 import org.apache.flink.types.Either;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.OptionalFailure;
@@ -260,36 +256,37 @@ public class ExecutionJobVertex
         }
     }
 
-    public void changeParallelism(int newParallelism){
+    public void changeParallelism(int newParallelism) {
         int oldParallelism = this.parallelismInfo.getParallelism();
-        if(newParallelism == oldParallelism){
+        if (newParallelism == oldParallelism) {
             return;
         }
         this.jobVertex.setParallelism(newParallelism);
         this.parallelismInfo.setParallelism(newParallelism);
 
-        if(newParallelism > oldParallelism){
+        if (newParallelism > oldParallelism) {
             for (int i = 0; i < newParallelism - oldParallelism; i++) {
-                for(IntermediateResult ires : this.producedDataSets){
+                for (IntermediateResult ires : this.producedDataSets) {
                     ires.increaseParallelism();
                 }
                 increaseParallelism();
             }
         } else {
             for (int i = 0; i < oldParallelism - newParallelism; i++) {
-                for(IntermediateResult ires : this.producedDataSets){
+                for (IntermediateResult ires : this.producedDataSets) {
                     ires.decreaseParallelism();
                 }
                 decreaseParallelism();
             }
         }
 
-        //make the existing blob key to null to overwrite stored task information in the blob server
+        // make the existing blob key to null to overwrite stored task information in the blob
+        // server
         this.taskInformationOrBlobKey = null;
     }
 
-    private void increaseParallelism(){
-        ExecutionVertex lastVertex = this.taskVertices.get(this.taskVertices.size()-1);
+    private void increaseParallelism() {
+        ExecutionVertex lastVertex = this.taskVertices.get(this.taskVertices.size() - 1);
         int newSubTaskIndex = lastVertex.getParallelSubtaskIndex() + 1;
         ExecutionVertex newExecutionVertex =
                 new ExecutionVertex(
@@ -304,8 +301,8 @@ public class ExecutionJobVertex
         this.taskVertices.add(newExecutionVertex);
     }
 
-    private void decreaseParallelism(){
-        this.taskVertices.remove(taskVertices.size()-1);
+    private void decreaseParallelism() {
+        this.taskVertices.remove(taskVertices.size() - 1);
     }
 
     /**
@@ -487,7 +484,9 @@ public class ExecutionJobVertex
         }
     }
 
-    public void reconnectToPredecessors(Map<IntermediateDataSetID, IntermediateResult> intermediateDataSets) throws JobException {
+    public void reconnectToPredecessors(
+            Map<IntermediateDataSetID, IntermediateResult> intermediateDataSets)
+            throws JobException {
         List<JobEdge> inputs = jobVertex.getInputs();
 
         if (LOG.isDebugEnabled()) {

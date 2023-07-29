@@ -92,10 +92,14 @@ public interface TaskExecutorGateway
             TaskDeploymentDescriptor tdd, JobMasterId jobMasterId, @RpcTimeout Time timeout);
 
     CompletableFuture<Acknowledge> updateSubpartitionParallelism(
-            ExecutionAttemptID executionAttemptID, Map<IntermediateResultPartitionID, Integer> partitionDescriptors, @RpcTimeout Time timeout);
+            ExecutionAttemptID executionAttemptID,
+            Map<IntermediateResultPartitionID, Integer> partitionDescriptors,
+            @RpcTimeout Time timeout);
 
     CompletableFuture<Acknowledge> updateInputChannels(
-            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, @RpcTimeout Time timeout);
+            ExecutionAttemptID executionAttemptID,
+            List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors,
+            @RpcTimeout Time timeout);
 
     CompletableFuture<Acknowledge> unblockChannels(
             ExecutionAttemptID executionAttemptID, @RpcTimeout Time timeout);

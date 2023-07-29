@@ -103,8 +103,11 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
 
     @Override
     public CompletableFuture<Acknowledge> updateSubpartitionParallelism(
-            ExecutionAttemptID executionAttemptID, Map<IntermediateResultPartitionID, Integer> partitionDescriptors, Time timeout) {
-        return originalGateway.updateSubpartitionParallelism(executionAttemptID, partitionDescriptors, timeout);
+            ExecutionAttemptID executionAttemptID,
+            Map<IntermediateResultPartitionID, Integer> partitionDescriptors,
+            Time timeout) {
+        return originalGateway.updateSubpartitionParallelism(
+                executionAttemptID, partitionDescriptors, timeout);
     }
 
     @Override
@@ -117,8 +120,11 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
 
     @Override
     public CompletableFuture<Acknowledge> updateInputChannels(
-            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, Time timeout) {
-        return originalGateway.updateInputChannels(executionAttemptID, inputGateDeploymentDescriptors, timeout);
+            ExecutionAttemptID executionAttemptID,
+            List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors,
+            Time timeout) {
+        return originalGateway.updateInputChannels(
+                executionAttemptID, inputGateDeploymentDescriptors, timeout);
     }
 
     @Override

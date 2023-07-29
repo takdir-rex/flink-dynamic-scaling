@@ -18,8 +18,6 @@
 
 package org.apache.flink.runtime.io.network.partition;
 
-import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.inflightlogging.InFlightLog;
@@ -28,8 +26,6 @@ import org.apache.flink.runtime.inflightlogging.InMemorySubpartitionInFlightLogg
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
-import org.apache.flink.runtime.io.network.buffer.BufferConsumerWithPartialRecordLength;
-
 import org.apache.flink.runtime.io.network.buffer.FreeingBufferRecycler;
 import org.apache.flink.runtime.io.network.buffer.NetworkBuffer;
 
@@ -86,9 +82,11 @@ public class PipelinedApproximateSubpartition extends PipelinedSubpartition {
                     try {
                         final AbstractEvent event =
                                 EventSerializer.fromBuffer(
-                                        eventBuffer,
-                                        getClass().getClassLoader());
-                        barrier = event instanceof CheckpointBarrier ? (CheckpointBarrier) event : null;
+                                        eventBuffer, getClass().getClassLoader());
+                        barrier =
+                                event instanceof CheckpointBarrier
+                                        ? (CheckpointBarrier) event
+                                        : null;
                     } catch (IOException e) {
                         throw new IllegalStateException(
                                 "Should always be able to deserialize in-memory event", e);
@@ -105,12 +103,15 @@ public class PipelinedApproximateSubpartition extends PipelinedSubpartition {
                     ByteBuf nettyByteBuf = buffer.asByteBuf();
                     byte[] buffBytes = new byte[nettyByteBuf.readableBytes()];
                     nettyByteBuf.getBytes(nettyByteBuf.readerIndex(), buffBytes);
-                    inFlightLog.log(new NetworkBuffer(
-                            MemorySegmentFactory.wrap(buffBytes),
-                            FreeingBufferRecycler.INSTANCE,
-                            buffer.getDataType(),
-                            buffer.isCompressed(),
-                            buffer.getSize()), downstreamCheckpointId, false);
+                    inFlightLog.log(
+                            new NetworkBuffer(
+                                    MemorySegmentFactory.wrap(buffBytes),
+                                    FreeingBufferRecycler.INSTANCE,
+                                    buffer.getDataType(),
+                                    buffer.isCompressed(),
+                                    buffer.getSize()),
+                            downstreamCheckpointId,
+                            false);
                 }
             }
         }
@@ -198,5 +199,4 @@ public class PipelinedApproximateSubpartition extends PipelinedSubpartition {
         // The Approximate Local Recovery can not work with unaligned checkpoint for now, so no need
         // to recover channel state
     }
-
 }

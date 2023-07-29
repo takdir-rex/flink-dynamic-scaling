@@ -60,13 +60,14 @@ class LocalInputPreferredSlotSharingStrategy implements SlotSharingStrategy {
             final Set<SlotSharingGroup> logicalSlotSharingGroups,
             final Set<CoLocationGroup> coLocationGroups) {
 
-        executionSlotSharingGroupBuilder = new ExecutionSlotSharingGroupBuilder(
-                topology, logicalSlotSharingGroups, coLocationGroups);
+        executionSlotSharingGroupBuilder =
+                new ExecutionSlotSharingGroupBuilder(
+                        topology, logicalSlotSharingGroups, coLocationGroups);
 
         this.executionSlotSharingGroupMap = executionSlotSharingGroupBuilder.build();
     }
 
-    public void requestNewSlotsAndDeploy(List<SchedulingExecutionVertex> vertices){
+    public void requestNewSlotsAndDeploy(List<SchedulingExecutionVertex> vertices) {
         executionSlotSharingGroupBuilder.tryToAllocateSlot(vertices);
     }
 
@@ -206,7 +207,7 @@ class LocalInputPreferredSlotSharingStrategy implements SlotSharingStrategy {
             return executionSlotSharingGroupMap;
         }
 
-        private void tryToAllocateSlot(List<SchedulingExecutionVertex> vertices){
+        private void tryToAllocateSlot(List<SchedulingExecutionVertex> vertices) {
             final List<SchedulingExecutionVertex> remaining =
                     tryFindOptimalAvailableExecutionSlotSharingGroupFor(vertices);
 

@@ -29,7 +29,6 @@ import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumerWithPartialRecordLength;
 import org.apache.flink.runtime.io.network.logger.NetworkActionsLogger;
-import org.apache.flink.runtime.io.network.partition.consumer.EndOfChannelStateEvent;
 
 import org.apache.flink.shaded.guava30.com.google.common.collect.Iterators;
 
@@ -158,7 +157,8 @@ public class PipelinedSubpartition extends ResultSubpartition
     public void finishReadRecoveredState(boolean notifyAndBlockOnCompletion) throws IOException {
         if (notifyAndBlockOnCompletion) {
             // ### do not block operators when recovery finished
-//            add(EventSerializer.toBufferConsumer(EndOfChannelStateEvent.INSTANCE, false), 0, false);
+            //            add(EventSerializer.toBufferConsumer(EndOfChannelStateEvent.INSTANCE,
+            // false), 0, false);
         }
     }
 
@@ -316,7 +316,7 @@ public class PipelinedSubpartition extends ResultSubpartition
 
                 buffer = buildSliceBuffer(bufferConsumerWithPartialRecordLength);
 
-                if(!bufferConsumer.isFinished() && buffers.size() > 1){
+                if (!bufferConsumer.isFinished() && buffers.size() > 1) {
                     // ### ignore watermarks like messages when rescaling
                     buffer.recycleBuffer();
                     buffer = null;

@@ -561,7 +561,7 @@ public class ExecutionVertex
         // only forward this notification if the execution is still the current execution
         // otherwise we have an outdated execution
         if (isCurrentExecution(execution)) {
-            if(newState == ExecutionState.RUNNING){
+            if (newState == ExecutionState.RUNNING) {
                 runningFuture.complete(null);
             }
             getExecutionGraphAccessor().notifyExecutionChange(execution, newState);
@@ -572,7 +572,7 @@ public class ExecutionVertex
         return currentExecution == execution;
     }
 
-    public void startListenRunningFuture(){
+    public void startListenRunningFuture() {
         runningFuture = new CompletableFuture<>();
     }
 
@@ -603,12 +603,15 @@ public class ExecutionVertex
     }
 
     public CompletableFuture<Void> updateSubpartitionParallelism() {
-        Collection<IntermediateResultPartition> partitions =
-                this.getProducedPartitions().values();
-        Map<IntermediateResultPartitionID, Integer> partitionDescriptors = new HashMap<>(partitions.size());
+        Collection<IntermediateResultPartition> partitions = this.getProducedPartitions().values();
+        Map<IntermediateResultPartitionID, Integer> partitionDescriptors =
+                new HashMap<>(partitions.size());
         for (IntermediateResultPartition partition : partitions) {
-            partitionDescriptors.put(partition.getPartitionId(), PartitionDescriptor.from(partition).getNumberOfSubpartitions());
+            partitionDescriptors.put(
+                    partition.getPartitionId(),
+                    PartitionDescriptor.from(partition).getNumberOfSubpartitions());
         }
-        return this.getCurrentExecutionAttempt().updateSubpartitionParallelism(partitionDescriptors);
+        return this.getCurrentExecutionAttempt()
+                .updateSubpartitionParallelism(partitionDescriptors);
     }
 }

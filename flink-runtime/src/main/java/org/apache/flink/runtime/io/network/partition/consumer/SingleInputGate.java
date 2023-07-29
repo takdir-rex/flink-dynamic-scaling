@@ -34,7 +34,6 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.buffer.BufferDecompressor;
 import org.apache.flink.runtime.io.network.buffer.BufferPool;
 import org.apache.flink.runtime.io.network.buffer.BufferProvider;
-import org.apache.flink.runtime.io.network.metrics.InputChannelMetrics;
 import org.apache.flink.runtime.io.network.partition.PartitionProducerStateProvider;
 import org.apache.flink.runtime.io.network.partition.PrioritizedDeque;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
@@ -499,7 +498,7 @@ public class SingleInputGate extends IndexedInputGate {
         }
     }
 
-    public void addInputChannels(InputChannel... channels){
+    public void addInputChannels(InputChannel... channels) {
         synchronized (requestLock) {
             this.channels = Arrays.copyOf(this.channels, numberOfInputChannels + channels.length);
             for (int i = 0; i < channels.length; i++) {
@@ -513,7 +512,8 @@ public class SingleInputGate extends IndexedInputGate {
                 }
             }
             numberOfInputChannels += channels.length;
-            this.lastPrioritySequenceNumber = Arrays.copyOf(this.lastPrioritySequenceNumber, numberOfInputChannels);
+            this.lastPrioritySequenceNumber =
+                    Arrays.copyOf(this.lastPrioritySequenceNumber, numberOfInputChannels);
         }
     }
 

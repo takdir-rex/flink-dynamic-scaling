@@ -106,10 +106,12 @@ public interface TaskInvokable {
     void maybeInterruptOnCancel(
             Thread toInterrupt, @Nullable String taskName, @Nullable Long timeout);
 
-    //reload number of channels after parallelism changes
+    // reload number of channels after parallelism changes
     default void reloadRecordWriters() {};
 
     default void recoverGate() {};
 
-    default CompletableFuture<Void> getRecoverGateFuture() {return null;};
+    default CompletableFuture<Void> getRecoverGateFuture() {
+        return null;
+    };
 }

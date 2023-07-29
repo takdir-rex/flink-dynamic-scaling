@@ -61,12 +61,15 @@ public interface TaskManagerGateway extends TaskExecutorOperatorEventGateway {
 
     default CompletableFuture<Acknowledge> updateSubpartitionParallelism(
             ExecutionAttemptID executionAttemptID,
-            Map<IntermediateResultPartitionID, Integer> partitionDescriptors, @RpcTimeout Time timeout) {
+            Map<IntermediateResultPartitionID, Integer> partitionDescriptors,
+            @RpcTimeout Time timeout) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 
     default CompletableFuture<Acknowledge> updateInputChannels(
-            ExecutionAttemptID executionAttemptID, List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors, @RpcTimeout Time timeout) {
+            ExecutionAttemptID executionAttemptID,
+            List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors,
+            @RpcTimeout Time timeout) {
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 

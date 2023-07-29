@@ -77,7 +77,9 @@ public class LocalContextUtils {
 
         configuration.addAll(options.getPythonConfiguration());
 
-        configuration.setString(CliOptionsParser.OPTION_SNAPSHOTGROUPS.getOpt(), options.getSnapshotGroupConfiguration());
+        configuration.setString(
+                CliOptionsParser.OPTION_SNAPSHOTGROUPS.getOpt(),
+                options.getSnapshotGroupConfiguration());
 
         final List<URL> dependencies = discoverDependencies(jars, libDirs);
 

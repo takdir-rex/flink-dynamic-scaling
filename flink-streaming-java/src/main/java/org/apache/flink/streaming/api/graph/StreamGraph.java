@@ -861,8 +861,8 @@ public class StreamGraph implements Pipeline {
 
     public Collection<StreamNode> getStreamNodes() {
         ArrayList<StreamNode> nodes = new ArrayList<>(streamNodes.values());
-        for(Integer sinkId : sinks){
-            if(nodes.get(0).getId() == sinkId){
+        for (Integer sinkId : sinks) {
+            if (nodes.get(0).getId() == sinkId) {
                 nodes.add(nodes.remove(0));
             }
         }

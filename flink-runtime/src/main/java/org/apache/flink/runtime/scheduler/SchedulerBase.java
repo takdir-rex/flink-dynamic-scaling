@@ -826,26 +826,29 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         executionGraph.updateAccumulators(accumulatorSnapshot);
     }
 
-    public CompletableFuture<Acknowledge> rescale(final String jobVertexId, final int newParallelism){
-        ExecutionJobVertex ejv = executionGraph.getJobVertex(JobVertexID.fromHexString(jobVertexId));
-        if(newParallelism == ejv.getParallelism()){
+    public CompletableFuture<Acknowledge> rescale(
+            final String jobVertexId, final int newParallelism) {
+        ExecutionJobVertex ejv =
+                executionGraph.getJobVertex(JobVertexID.fromHexString(jobVertexId));
+        if (newParallelism == ejv.getParallelism()) {
             return CompletableFuture.completedFuture(Acknowledge.get());
         }
-        if(newParallelism < ejv.getParallelism()){
+        if (newParallelism < ejv.getParallelism()) {
             // currently unsupported
             return CompletableFuture.completedFuture(Acknowledge.get());
         }
         Set<String> upstreamJobVertexIdsSet = new HashSet<>();
-        if(ejv.getJobVertex().isInputVertex()){
+        if (ejv.getJobVertex().isInputVertex()) {
             upstreamJobVertexIdsSet.add(jobVertexId);
         } else {
-            //need to block the upstreams of multiple input downstream
+            // need to block the upstreams of multiple input downstream
             for (IntermediateDataSet producedDataSet : ejv.getJobVertex().getProducedDataSets()) {
                 for (JobEdge outputEdge : producedDataSet.getConsumers()) {
                     for (JobEdge inputEdge : outputEdge.getTarget().getInputs()) {
-                        if(inputEdge.getSource() != null){
-                            String upstreamId = inputEdge.getSource().getProducer().getID().toHexString();
-                            if(!upstreamId.equals(jobVertexId)){
+                        if (inputEdge.getSource() != null) {
+                            String upstreamId =
+                                    inputEdge.getSource().getProducer().getID().toHexString();
+                            if (!upstreamId.equals(jobVertexId)) {
                                 upstreamJobVertexIdsSet.add(upstreamId);
                             }
                         }
@@ -853,24 +856,35 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                 }
             }
 
-            //blocking upstreams of rescaled job vertex
+            // blocking upstreams of rescaled job vertex
             for (JobEdge inputEdge : ejv.getJobVertex().getInputs()) {
-                if(inputEdge.getSource() != null){
-                    upstreamJobVertexIdsSet.add(inputEdge.getSource().getProducer().getID().toHexString());
+                if (inputEdge.getSource() != null) {
+                    upstreamJobVertexIdsSet.add(
+                            inputEdge.getSource().getProducer().getID().toHexString());
                 }
             }
         }
 
         StringBuilder upstreamJobVertexIds = new StringBuilder();
-        for(String idStr : upstreamJobVertexIdsSet){
+        for (String idStr : upstreamJobVertexIdsSet) {
             upstreamJobVertexIds.append(idStr).append(",");
         }
-        if(upstreamJobVertexIds.length() > 0){
-            upstreamJobVertexIds.deleteCharAt(upstreamJobVertexIds.length()-1); //remove last separator (,)
+        if (upstreamJobVertexIds.length() > 0) {
+            upstreamJobVertexIds.deleteCharAt(
+                    upstreamJobVertexIds.length() - 1); // remove last separator (,)
         }
 
-        //trigger global checkpoint and keep blocking all input channels after checkpoint barriers reach the given job vertex
-        triggerSavepoint(null, false, "rescale-" + ejv.getJobVertexId().toHexString() + "=" + newParallelism + ":" + upstreamJobVertexIds);
+        // trigger global checkpoint and keep blocking all input channels after checkpoint barriers
+        // reach the given job vertex
+        triggerSavepoint(
+                null,
+                false,
+                "rescale-"
+                        + ejv.getJobVertexId().toHexString()
+                        + "="
+                        + newParallelism
+                        + ":"
+                        + upstreamJobVertexIds);
         return CompletableFuture.completedFuture(Acknowledge.get());
     }
 

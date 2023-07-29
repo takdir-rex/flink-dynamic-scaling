@@ -785,7 +785,8 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
     }
 
     @Override
-    public CompletableFuture<Acknowledge> rescale(final String jobVertexId, final int newParallelism, final Time timeout){
+    public CompletableFuture<Acknowledge> rescale(
+            final String jobVertexId, final int newParallelism, final Time timeout) {
         return schedulerNG.rescale(jobVertexId, newParallelism);
     }
 
