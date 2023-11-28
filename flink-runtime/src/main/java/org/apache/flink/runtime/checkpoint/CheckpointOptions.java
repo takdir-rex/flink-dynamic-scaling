@@ -323,7 +323,7 @@ public class CheckpointOptions implements Serializable {
         return new HashSet<>(Arrays.asList(jobIdsStr));
     }
 
-    public String getRescaledJobVertexId(){
+    public String getRescaledJobVertexId() {
         return snapshotGroup.substring("rescale-".length(), snapshotGroup.indexOf("="));
     }
 }

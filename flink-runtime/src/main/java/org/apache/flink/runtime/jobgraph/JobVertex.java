@@ -623,8 +623,8 @@ public class JobVertex implements java.io.Serializable {
         if (isInputVertex()) {
             return false;
         }
-        for (JobEdge edge : this.getInputs()){
-            if(edge.getSource().getProducer().equals(jobVertex)){
+        for (JobEdge edge : this.getInputs()) {
+            if (edge.getSource().getProducer().equals(jobVertex)) {
                 return true;
             }
         }

@@ -112,7 +112,7 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
     @Override
     public CompletableFuture<CheckpointPlan> calculateCheckpointPlan(final String snapshotGroup) {
         final boolean hasFinishedTasks;
-        if(snapshotGroup.startsWith("rescale-")){
+        if (snapshotGroup.startsWith("rescale-")) {
             hasFinishedTasks = context.hasFinishedTasks();
         } else {
             hasFinishedTasks = hasFinishedTask(snapshotGroup);
@@ -225,11 +225,12 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
     private CheckpointPlan calculateWithAllTasksRunning(final String snapshotGroup) {
         List<ExecutionVertex> targetedTasks = new ArrayList<>();
         List<ExecutionVertex> targetedSourceTasks = new ArrayList<>();
-        if(snapshotGroup.startsWith("rescale-")){
-            String rescaledTaskId = snapshotGroup.substring("rescale-".length(), snapshotGroup.indexOf("="));
+        if (snapshotGroup.startsWith("rescale-")) {
+            String rescaledTaskId =
+                    snapshotGroup.substring("rescale-".length(), snapshotGroup.indexOf("="));
             ExecutionJobVertex rescaledTask = null;
             for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
-                if(jobVertex.getJobVertexId().toHexString().equals(rescaledTaskId)){
+                if (jobVertex.getJobVertexId().toHexString().equals(rescaledTaskId)) {
                     rescaledTask = jobVertex;
                     break;
                 }
@@ -238,7 +239,7 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
             List<ExecutionJobVertex> firstLevelDownstreams = new ArrayList<>();
             targetedTasks.addAll(Arrays.asList(rescaledTask.getTaskVertices()));
             for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
-                if (triggeredTaskIds.contains(jobVertex.getJobVertexId().toHexString())){
+                if (triggeredTaskIds.contains(jobVertex.getJobVertexId().toHexString())) {
                     targetedSourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
                 } else {
                     if (jobVertex.getJobVertex().isDownStreamOf(rescaledTask.getJobVertex())) {
@@ -249,7 +250,7 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
             }
             // add second-level downstreams as terminator
             for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
-                for(ExecutionJobVertex first : firstLevelDownstreams){
+                for (ExecutionJobVertex first : firstLevelDownstreams) {
                     if (jobVertex.getJobVertex().isDownStreamOf(first.getJobVertex())) {
                         targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
                         break;
@@ -358,7 +359,7 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
     }
 
     private CheckpointPlan calculateAfterTasksFinished(final String snapshotGroup) {
-        if(snapshotGroup.startsWith("rescale-")){
+        if (snapshotGroup.startsWith("rescale-")) {
             return calculateAfterTasksFinished();
         }
         // First collect the task running status into BitSet so that we could

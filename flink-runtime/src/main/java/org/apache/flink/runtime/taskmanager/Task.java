@@ -1428,8 +1428,8 @@ public class Task
 
         if (executionState == ExecutionState.RUNNING) {
             checkState(invokable instanceof CheckpointableTask, "invokable is not checkpointable");
-            //block consumption for rescaling
-            for(InputGate gate : inputGates){
+            // block consumption for rescaling
+            for (InputGate gate : inputGates) {
                 gate.setSuspended(true);
             }
             // flush outputs

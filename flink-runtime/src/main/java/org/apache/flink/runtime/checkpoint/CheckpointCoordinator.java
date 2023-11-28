@@ -1583,8 +1583,7 @@ public class CheckpointCoordinator {
             LOG.info("Restoring snapshot group: {}", snapshotGroup);
 
             // Restore from the latest checkpoint
-            CompletedCheckpoint latest =
-                    completedCheckpointStore.getLatestCheckpoint();
+            CompletedCheckpoint latest = completedCheckpointStore.getLatestCheckpoint();
 
             if (latest == null) {
                 LOG.info("No checkpoint found during restore.");

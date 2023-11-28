@@ -714,7 +714,7 @@ public class SingleInputGate extends IndexedInputGate {
     private Optional<InputWithData<InputChannel, BufferAndAvailability>> waitAndGetNextData(
             boolean blocking) throws IOException, InterruptedException {
         while (true) {
-            if(isSuspended()){
+            if (isSuspended()) {
                 continue;
             }
             synchronized (inputChannelsWithData) {
