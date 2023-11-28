@@ -51,8 +51,13 @@ public interface CompletedCheckpointStore {
         if (allCheckpoints.isEmpty()) {
             return null;
         }
-
-        return allCheckpoints.get(allCheckpoints.size() - 1);
+        // do not restore savepoint
+        for (int i = 1; i <= allCheckpoints.size(); i++) {
+            if (!allCheckpoints.get(allCheckpoints.size() - i).getProperties().isSavepoint()) {
+                return allCheckpoints.get(allCheckpoints.size() - i);
+            }
+        }
+        return null;
     }
 
     default CompletedCheckpoint getLatestCheckpoint(String snapshotGroup) throws Exception {

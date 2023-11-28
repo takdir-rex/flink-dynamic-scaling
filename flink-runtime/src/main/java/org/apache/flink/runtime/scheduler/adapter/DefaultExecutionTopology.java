@@ -187,6 +187,10 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         // request slot for newly created instances
         scheduler.requestNewSlots(newSchedulingExecutionVertices);
 
+        // trigger global recovery
+        executionGraph.failGlobal(new Exception("Trigger global recovery"));
+        //        rescaledEjv.getTaskVertices()[0].fail(new Exception("Trigger global recovery"));
+        /*
         // futures for waiting restarted tasks to be running
         List<CompletableFuture> runningFutures = new ArrayList<>();
         // schedule restart for rescaled tasks
@@ -259,7 +263,7 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                                                     }
                                                 }
                                             });
-                        });
+                        });*/
     }
 
     private Set<JobVertexID> scheduleDownstreamRestart(

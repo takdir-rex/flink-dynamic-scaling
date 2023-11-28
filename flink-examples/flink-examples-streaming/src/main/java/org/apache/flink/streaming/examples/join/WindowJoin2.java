@@ -113,8 +113,10 @@ public class WindowJoin2 {
         // checkpoint is not enabled). Change the default in
         // StreamingJobGraphGenerator.getCheckpointingMode(CheckpointConfig checkpointConfig)
 
+        env.getCheckpointConfig().setCheckpointInterval(10000);
+
         env.disableOperatorChaining();
-        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3, 5000));
+        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(10, 5000));
 
         //                env.enableCheckpointing(2000);
         //        env.setStateBackend(new HashMapStateBackend());
