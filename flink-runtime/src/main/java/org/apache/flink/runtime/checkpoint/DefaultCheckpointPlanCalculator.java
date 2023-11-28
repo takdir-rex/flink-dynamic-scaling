@@ -35,9 +35,11 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
@@ -109,7 +111,12 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
 
     @Override
     public CompletableFuture<CheckpointPlan> calculateCheckpointPlan(final String snapshotGroup) {
-        boolean hasFinishedTasks = hasFinishedTask(snapshotGroup);
+        final boolean hasFinishedTasks;
+        if(snapshotGroup.startsWith("rescale-")){
+            hasFinishedTasks = context.hasFinishedTasks();
+        } else {
+            hasFinishedTasks = hasFinishedTask(snapshotGroup);
+        }
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
@@ -207,21 +214,61 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
                 allowCheckpointsAfterTasksFinished);
     }
 
+    private Set<String> getBlockedJobIdsForRescaling(final String snapshotGroup) {
+        // after "rescale-<rescaled_job_id>:"
+        String targetJobsString = snapshotGroup;
+        targetJobsString = targetJobsString.substring(targetJobsString.indexOf(":") + 1);
+        String[] jobIdsStr = targetJobsString.split(",");
+        return new HashSet<>(Arrays.asList(jobIdsStr));
+    }
+
     private CheckpointPlan calculateWithAllTasksRunning(final String snapshotGroup) {
         List<ExecutionVertex> targetedTasks = new ArrayList<>();
         List<ExecutionVertex> targetedSourceTasks = new ArrayList<>();
-
-        for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
-            if (jobVertex.getJobVertex().isInputVertex()
-                    && Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)) {
-                targetedSourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+        if(snapshotGroup.startsWith("rescale-")){
+            String rescaledTaskId = snapshotGroup.substring("rescale-".length(), snapshotGroup.indexOf("="));
+            ExecutionJobVertex rescaledTask = null;
+            for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
+                if(jobVertex.getJobVertexId().toHexString().equals(rescaledTaskId)){
+                    rescaledTask = jobVertex;
+                    break;
+                }
             }
-            if (Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)
-                    || jobVertex.getJobVertex().isDownStreamOfSnapshotGroup(snapshotGroup)) {
-                targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
-            } else {
-                if (jobVertex.getJobVertex().isDirectUpstreamOfSnapshotGroup(snapshotGroup)) {
+            Set<String> triggeredTaskIds = getBlockedJobIdsForRescaling(snapshotGroup);
+            List<ExecutionJobVertex> firstLevelDownstreams = new ArrayList<>();
+            targetedTasks.addAll(Arrays.asList(rescaledTask.getTaskVertices()));
+            for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
+                if (triggeredTaskIds.contains(jobVertex.getJobVertexId().toHexString())){
                     targetedSourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                } else {
+                    if (jobVertex.getJobVertex().isDownStreamOf(rescaledTask.getJobVertex())) {
+                        targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                        firstLevelDownstreams.add(jobVertex);
+                    }
+                }
+            }
+            // add second-level downstreams as terminator
+            for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
+                for(ExecutionJobVertex first : firstLevelDownstreams){
+                    if (jobVertex.getJobVertex().isDownStreamOf(first.getJobVertex())) {
+                        targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                        break;
+                    }
+                }
+            }
+        } else {
+            for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
+                if (jobVertex.getJobVertex().isInputVertex()
+                        && Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)) {
+                    targetedSourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                }
+                if (Objects.equals(jobVertex.getSnapshotGroup(), snapshotGroup)
+                        || jobVertex.getJobVertex().isDownStreamOfSnapshotGroup(snapshotGroup)) {
+                    targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                } else {
+                    if (jobVertex.getJobVertex().isDirectUpstreamOfSnapshotGroup(snapshotGroup)) {
+                        targetedSourceTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+                    }
                 }
             }
         }
@@ -311,6 +358,9 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
     }
 
     private CheckpointPlan calculateAfterTasksFinished(final String snapshotGroup) {
+        if(snapshotGroup.startsWith("rescale-")){
+            return calculateAfterTasksFinished();
+        }
         // First collect the task running status into BitSet so that we could
         // do JobVertex level judgement for some vertices and avoid time-consuming
         // access to volatile isFinished flag of Execution.

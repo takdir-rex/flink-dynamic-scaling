@@ -51,6 +51,8 @@ import org.apache.flink.runtime.io.network.api.writer.SingleRecordWriter;
 import org.apache.flink.runtime.io.network.partition.ChannelStateHolder;
 import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
+import org.apache.flink.runtime.jobgraph.JobEdge;
+import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointableTask;
 import org.apache.flink.runtime.jobgraph.tasks.CoordinatedTask;
@@ -1323,12 +1325,62 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             throws IOException {
         FlinkSecurityManager.monitorUserSystemExitForCurrentThread();
         try {
-            if (Objects.isNull(checkpointOptions.getSnapshotGroup())
-                    || checkpointOptions.isRescaling()) {
-                if (performCheckpoint(checkpointMetaData, checkpointOptions, checkpointMetrics)) {
+            if(Objects.isNull(checkpointOptions.getSnapshotGroup())) { // global checkpoint
+                if (performCheckpoint(
+                        checkpointMetaData,
+                        checkpointOptions,
+                        checkpointMetrics)) {
                     if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
                         runSynchronousSavepointMailboxLoop();
                     }
+                }
+            } else if (checkpointOptions.isRescaling()) { //rescaling
+                String jobVertexId = environment.getJobVertexId().toHexString();
+                String rescaledJobVertexId = checkpointOptions.getRescaledJobVertexId();
+                if(checkpointOptions.getBlockedJobVertexIdsForRescaling().contains(jobVertexId)) { //initiators
+                    if(jobVertexId.equals(rescaledJobVertexId)){ //if source
+                        if (performCheckpoint(
+                                checkpointMetaData,
+                                checkpointOptions,
+                                checkpointMetrics)) {
+                            if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
+                                runSynchronousSavepointMailboxLoop();
+                            }
+                        }
+                    } else {
+                        // only send checkpoint barrier without recording own snapshot
+                        sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
+                    }
+                } else if (jobVertexId.equals(rescaledJobVertexId)) { //rescaled task not a source
+                    if (performCheckpoint(
+                            checkpointMetaData,
+                            checkpointOptions,
+                            checkpointMetrics)) {
+                        if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
+                            runSynchronousSavepointMailboxLoop();
+                        }
+                    }
+                } else if(isFirstLevelDownstreamOf(rescaledJobVertexId)) { // first-level downstream
+                    if (performCheckpoint(
+                            checkpointMetaData,
+                            checkpointOptions,
+                            checkpointMetrics)) {
+                        if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
+                            runSynchronousSavepointMailboxLoop();
+                        }
+                    }
+                } else if(isSecondLevelDownstreamOf(rescaledJobVertexId)) { // second-level downstream
+                    if (performCheckpoint(
+                            checkpointMetaData,
+                            checkpointOptions,
+                            checkpointMetrics)) {
+                        if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
+                            runSynchronousSavepointMailboxLoop();
+                        }
+                    }
+                } else {
+                    // do nothing
+                    return;
                 }
             } else if (!environment
                             .getJobVertex()
@@ -1391,6 +1443,28 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         }
     }
 
+    boolean isFirstLevelDownstreamOf(String rescaledJobVertexId){
+        JobVertex jobVertex = environment.getJobVertex();
+        for (JobEdge edge : jobVertex.getInputs()){
+            if(edge.getSource().getProducer().getID().toHexString().equals(rescaledJobVertexId)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    boolean isSecondLevelDownstreamOf(String rescaledJobVertexId){
+        JobVertex jobVertex = environment.getJobVertex();
+        for (JobEdge edge : jobVertex.getInputs()){
+            for (JobEdge edge1 : edge.getSource().getProducer().getInputs()){
+                if(edge1.getSource().getProducer().getID().toHexString().equals(rescaledJobVertexId)){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     @Override
     public void abortCheckpointOnBarrier(long checkpointId, CheckpointException cause)
             throws IOException {
@@ -1444,15 +1518,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                                 && endOfDataReceived
                                 && this.finalCheckpointMinId == null) {
                             this.finalCheckpointMinId = checkpointMetaData.getCheckpointId();
-                        }
-                        // ### suspend events consumption if the rescaled tasks are source operators
-                        if (checkpointOptions.isRescaling()) {
-                            if (checkpointOptions
-                                            .getBlockedJobIdsForRescaling()
-                                            .contains(environment.getJobID().toHexString())
-                                    && this instanceof SourceStreamTask) {
-                                mailboxProcessor.suspend();
-                            }
                         }
                         subtaskCheckpointCoordinator.checkpointState(
                                 checkpointMetaData,

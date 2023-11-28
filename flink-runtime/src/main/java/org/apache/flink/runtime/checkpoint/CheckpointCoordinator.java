@@ -552,10 +552,8 @@ public class CheckpointCoordinator {
             CompletableFuture<CheckpointPlan> checkpointPlanFuture;
             if (request.snapshotGroup == null) {
                 checkpointPlanFuture = checkpointPlanCalculator.calculateCheckpointPlan();
-            } else if (request.snapshotGroup.startsWith("rescale-")) {
-                // checkpoint before for rescaling
-                checkpointPlanFuture = checkpointPlanCalculator.calculateCheckpointPlan();
             } else {
+                // also checkpoint before for rescaling
                 checkpointPlanFuture =
                         checkpointPlanCalculator.calculateCheckpointPlan(request.snapshotGroup);
             }
@@ -1586,7 +1584,7 @@ public class CheckpointCoordinator {
 
             // Restore from the latest checkpoint
             CompletedCheckpoint latest =
-                    completedCheckpointStore.getLatestCheckpoint(snapshotGroup);
+                    completedCheckpointStore.getLatestCheckpoint();
 
             if (latest == null) {
                 LOG.info("No checkpoint found during restore.");

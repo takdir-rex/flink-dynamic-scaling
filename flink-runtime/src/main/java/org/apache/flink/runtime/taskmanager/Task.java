@@ -544,20 +544,9 @@ public class Task
     }
 
     public void unblockChannels() {
-        // unblock input channels
+        // unblock input channels after rescaling
         for (IndexedInputGate inputGate : inputGates) {
-            for (int i = 0; i < inputGate.getNumberOfInputChannels(); i++) {
-                try {
-                    inputGate.getChannel(i).resumeConsumption();
-                    LOG.debug(
-                            "Unblocking input channel {} on input gate index {} in task {}",
-                            i,
-                            inputGate.getInputGateIndex(),
-                            taskNameWithSubtask);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+            inputGate.setSuspended(false);
         }
     }
 
@@ -1439,6 +1428,14 @@ public class Task
 
         if (executionState == ExecutionState.RUNNING) {
             checkState(invokable instanceof CheckpointableTask, "invokable is not checkpointable");
+            //block consumption for rescaling
+            for(InputGate gate : inputGates){
+                gate.setSuspended(true);
+            }
+            // flush outputs
+            for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters) {
+                partitionWriter.flushAll();
+            }
             try {
                 ((CheckpointableTask) invokable)
                         .triggerCheckpointAsync(checkpointMetaData, checkpointOptions)

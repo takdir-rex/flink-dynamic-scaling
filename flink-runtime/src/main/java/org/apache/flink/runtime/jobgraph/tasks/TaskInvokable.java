@@ -113,5 +113,5 @@ public interface TaskInvokable {
 
     default CompletableFuture<Void> getRecoverGateFuture() {
         return null;
-    };
+    }
 }

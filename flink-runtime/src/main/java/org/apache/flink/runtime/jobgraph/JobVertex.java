@@ -619,6 +619,18 @@ public class JobVertex implements java.io.Serializable {
         return false;
     }
 
+    public boolean isDownStreamOf(JobVertex jobVertex) {
+        if (isInputVertex()) {
+            return false;
+        }
+        for (JobEdge edge : this.getInputs()){
+            if(edge.getSource().getProducer().equals(jobVertex)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isDownStreamOfSnapshotGroup(String givenSnapshotGroup) {
         if (isInputVertex()) {
             return false;

@@ -312,14 +312,18 @@ public class CheckpointOptions implements Serializable {
         return false;
     }
 
-    public Set<String> getBlockedJobIdsForRescaling() {
+    public Set<String> getBlockedJobVertexIdsForRescaling() {
         if (!isRescaling()) {
             return new HashSet<>();
         }
-        // after "rescale-<rescaled_job_id>:"
+        // after "rescale-<rescaled_job_id>=<parallelism>:"
         String targetJobsString = getSnapshotGroup();
         targetJobsString = targetJobsString.substring(targetJobsString.indexOf(":") + 1);
         String[] jobIdsStr = targetJobsString.split(",");
         return new HashSet<>(Arrays.asList(jobIdsStr));
+    }
+
+    public String getRescaledJobVertexId(){
+        return snapshotGroup.substring("rescale-".length(), snapshotGroup.indexOf("="));
     }
 }

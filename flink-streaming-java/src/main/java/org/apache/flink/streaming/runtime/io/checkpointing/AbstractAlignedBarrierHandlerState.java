@@ -75,7 +75,7 @@ abstract class AbstractAlignedBarrierHandlerState implements BarrierHandlerState
         boolean unblockChannels = true;
         if (checkpointBarrier
                 .getCheckpointOptions()
-                .getBlockedJobIdsForRescaling()
+                .getBlockedJobVertexIdsForRescaling()
                 .contains(controller.getJobVertex().getID().toHexString())) {
             unblockChannels = false;
         }
