@@ -1428,16 +1428,6 @@ public class Task
 
         if (executionState == ExecutionState.RUNNING) {
             checkState(invokable instanceof CheckpointableTask, "invokable is not checkpointable");
-            if (checkpointOptions.isRescaling()) {
-                // block consumption for rescaling
-                for (InputGate gate : inputGates) {
-                    gate.setSuspended(true);
-                }
-                // flush outputs
-                for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters) {
-                    partitionWriter.flushAll();
-                }
-            }
             try {
                 ((CheckpointableTask) invokable)
                         .triggerCheckpointAsync(checkpointMetaData, checkpointOptions)

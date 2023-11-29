@@ -94,9 +94,8 @@ public abstract class AbstractStreamTaskNetworkInput<
                 try {
                     result = currentRecordDeserializer.getNextRecord(deserializationDelegate);
                 } catch (IOException e) {
-                    return DataInputStatus.MORE_AVAILABLE;
-//                    throw new IOException(
-//                            String.format("Can't get next record for channel %s", lastChannel), e);
+                    throw new IOException(
+                            String.format("Can't get next record for channel %s", lastChannel), e);
                 }
                 if (result.isBufferConsumed()) {
                     currentRecordDeserializer = null;

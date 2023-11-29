@@ -57,6 +57,12 @@ abstract class AbstractAlignedBarrierHandlerState implements BarrierHandlerState
             boolean markChannelBlocked)
             throws IOException, CheckpointException {
         checkState(!checkpointBarrier.getCheckpointOptions().isUnalignedCheckpoint());
+        if (checkpointBarrier
+                .getCheckpointOptions()
+                .getBlockedJobVertexIdsForRescaling()
+                .contains(controller.getJobVertex().getID().toHexString())) {
+            markChannelBlocked = true;
+        }
 
         if (markChannelBlocked) {
             state.blockChannel(channelInfo);
