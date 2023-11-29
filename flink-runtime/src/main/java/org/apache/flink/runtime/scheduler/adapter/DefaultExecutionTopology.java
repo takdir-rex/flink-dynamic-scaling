@@ -239,26 +239,37 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                                     }
                                 }
                             }
-
-                            CompletableFuture.allOf(
-                                            updateChannelFutures.toArray(new CompletableFuture[0]))
-                                    .thenRun(
-                                            () -> {
-                                                for (String blockedId : blockedJobIdsHexString) {
-                                                    if (!blockedId.equals(rescaledJobIdHexString)) {
-                                                        for (ExecutionVertex vertex :
-                                                                executionGraph
-                                                                        .getJobVertex(
-                                                                                JobVertexID
-                                                                                        .fromHexString(
-                                                                                                blockedId))
-                                                                        .getTaskVertices()) {
-                                                            vertex.getCurrentExecutionAttempt()
-                                                                    .unblockChannels();
-                                                        }
-                                                    }
-                                                }
-                                            });
+                            //                            CompletableFuture.allOf(
+                            //
+                            // updateChannelFutures.toArray(new CompletableFuture[0]))
+                            //                                    .thenRun(
+                            //                                            () -> {
+                            //                                                for (String blockedId
+                            // : blockedJobIdsHexString) {
+                            //                                                    if
+                            // (!blockedId.equals(rescaledJobIdHexString)) {
+                            //                                                        for
+                            // (ExecutionVertex vertex :
+                            //
+                            // executionGraph
+                            //
+                            //  .getJobVertex(
+                            //
+                            //          JobVertexID
+                            //
+                            //                  .fromHexString(
+                            //
+                            //                          blockedId))
+                            //
+                            //  .getTaskVertices()) {
+                            //
+                            // vertex.getCurrentExecutionAttempt()
+                            //
+                            // .unblockChannels();
+                            //                                                        }
+                            //                                                    }
+                            //                                                }
+                            //                                            });
                         });
     }
 
