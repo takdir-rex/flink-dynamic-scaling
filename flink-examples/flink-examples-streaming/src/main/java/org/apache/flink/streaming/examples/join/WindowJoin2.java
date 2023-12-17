@@ -27,6 +27,7 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ExecutionOptions;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -39,6 +40,7 @@ import org.apache.flink.streaming.examples.join.WindowJoinSampleData.GradeSource
 import org.apache.flink.streaming.examples.join.WindowJoinSampleData.SalarySource;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.Calendar;
 
 /**
@@ -89,6 +91,8 @@ public class WindowJoin2 {
         conf.setString(
                 CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir.toURI().toString());
         conf.setString(CheckpointingOptions.SAVEPOINT_DIRECTORY, savepointDir.toURI().toString());
+
+        conf.set(ExecutionOptions.BUFFER_TIMEOUT, Duration.ofMillis(ExecutionOptions.FLUSH_AFTER_EVERY_RECORD));
 
         // obtain execution environment, run this example in "ingestion time"
         StreamExecutionEnvironment env =
