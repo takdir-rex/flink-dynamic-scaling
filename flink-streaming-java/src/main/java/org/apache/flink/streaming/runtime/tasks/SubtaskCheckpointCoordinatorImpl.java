@@ -556,7 +556,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
                         });
     }
 
-    private void finishAndReportAsync(
+    public void finishAndReportAsync(
             Map<OperatorID, OperatorSnapshotFutures> snapshotFutures,
             CheckpointMetaData metadata,
             CheckpointMetricsBuilder metrics,

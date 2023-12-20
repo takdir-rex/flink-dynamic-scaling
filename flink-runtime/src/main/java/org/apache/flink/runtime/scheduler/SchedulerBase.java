@@ -839,28 +839,53 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         }
         Set<String> upstreamJobVertexIdsSet = new HashSet<>();
         if (ejv.getJobVertex().isInputVertex()) {
+            //rescaling source operator
             upstreamJobVertexIdsSet.add(jobVertexId);
         } else {
-            // need to block the upstreams of multiple input downstream
-            for (IntermediateDataSet producedDataSet : ejv.getJobVertex().getProducedDataSets()) {
-                for (JobEdge outputEdge : producedDataSet.getConsumers()) {
-                    for (JobEdge inputEdge : outputEdge.getTarget().getInputs()) {
-                        if (inputEdge.getSource() != null) {
-                            String upstreamId =
-                                    inputEdge.getSource().getProducer().getID().toHexString();
-                            if (!upstreamId.equals(jobVertexId)) {
-                                upstreamJobVertexIdsSet.add(upstreamId);
-                            }
-                        }
-                    }
-                }
-            }
-
             // blocking upstreams of rescaled job vertex
             for (JobEdge inputEdge : ejv.getJobVertex().getInputs()) {
                 if (inputEdge.getSource() != null) {
                     upstreamJobVertexIdsSet.add(
                             inputEdge.getSource().getProducer().getID().toHexString());
+                }
+            }
+
+            Set<JobVertex> firstLevelDownstreams = new HashSet<>();
+            //collect first downstreams
+            for (ExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()){
+                if(jobVertex.getJobVertex().isDownStreamOf(ejv.getJobVertex())){
+                    firstLevelDownstreams.add(jobVertex.getJobVertex());
+                }
+            }
+            Set<JobVertex> secondLevelDownstreams = new HashSet<>();
+            for(JobVertex firstDownstream : firstLevelDownstreams){
+                //collect second downstreams
+                for (ExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()){
+                    if(jobVertex.getJobVertex().isDownStreamOf(firstDownstream)){
+                        secondLevelDownstreams.add(jobVertex.getJobVertex());
+                    }
+                }
+                //block the parents of multiple input fist-level downstreams
+                for (JobEdge inputEdge : firstDownstream.getInputs()) {
+                    if (inputEdge.getSource() != null) { //not a source operator
+                        String upstreamId =
+                                inputEdge.getSource().getProducer().getID().toHexString();
+                        if (!upstreamId.equals(jobVertexId)) {
+                            upstreamJobVertexIdsSet.add(upstreamId);
+                        }
+                    }
+                }
+            }
+
+            //block the parents of multiple input second-level downstreams
+            for(JobVertex secondDownstream : secondLevelDownstreams){
+                for (JobEdge inputEdge : secondDownstream.getInputs()) {
+                    if (inputEdge.getSource() != null) { //not a source operator
+                        JobVertex upstream = inputEdge.getSource().getProducer();
+                        if(!firstLevelDownstreams.contains(upstream)){
+                            upstreamJobVertexIdsSet.add(upstream.getID().toHexString());
+                        }
+                    }
                 }
             }
         }

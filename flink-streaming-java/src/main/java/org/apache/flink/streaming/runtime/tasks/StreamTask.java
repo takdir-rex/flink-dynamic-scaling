@@ -123,6 +123,7 @@ import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -1366,7 +1367,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                     }
                 } else if (isSecondLevelDownstreamOf(
                         rescaledJobVertexId)) { // second-level downstream
-                    if (performCheckpoint(
+                    if (finishCheckpoint(
                             checkpointMetaData, checkpointOptions, checkpointMetrics)) {
                         if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
                             runSynchronousSavepointMailboxLoop();
@@ -1480,6 +1481,71 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         subtaskCheckpointCoordinator.sendCheckpointOnBarrier(
                 checkpointMetaData, checkpointOptions, operatorChain);
         return true;
+    }
+
+    private boolean finishCheckpoint(
+            CheckpointMetaData checkpointMetaData,
+            CheckpointOptions checkpointOptions,
+            CheckpointMetricsBuilder checkpointMetrics)
+            throws Exception {
+
+        final CheckpointType checkpointType = checkpointOptions.getCheckpointType();
+        LOG.debug(
+                "Finishing checkpoint {} {} on task {}",
+                checkpointMetaData.getCheckpointId(),
+                checkpointType,
+                getName());
+
+        if (checkpointType.isSynchronous()
+                && !checkpointType.shouldDrain()
+                && endOfDataReceived
+                && areCheckpointsWithFinishedTasksEnabled()) {
+            LOG.debug("Can not trigger a stop-with-savepoint w/o drain if a task is finishing.");
+            return false;
+        }
+
+        if (isRunning) {
+            actionExecutor.runThrowing(
+                    () -> {
+                        if (checkpointType.isSynchronous()) {
+                            setSynchronousSavepoint(
+                                    checkpointMetaData.getCheckpointId(),
+                                    checkpointType.shouldDrain());
+                        }
+
+                        if (areCheckpointsWithFinishedTasksEnabled()
+                                && endOfDataReceived
+                                && this.finalCheckpointMinId == null) {
+                            this.finalCheckpointMinId = checkpointMetaData.getCheckpointId();
+                        }
+                        subtaskCheckpointCoordinator.finishAndReportAsync(
+                                new HashMap<>(operatorChain.getNumberOfOperators()),
+                                checkpointMetaData,
+                                checkpointMetrics,
+                                operatorChain.isTaskDeployedAsFinished(),
+                                finishedOperators,
+                                this::isRunning
+                        );
+                    });
+
+            return true;
+        } else {
+            actionExecutor.runThrowing(
+                    () -> {
+                        // we cannot perform our checkpoint - let the downstream operators know that
+                        // they
+                        // should not wait for any input from this operator
+
+                        // we cannot broadcast the cancellation markers on the 'operator chain',
+                        // because it may not
+                        // yet be created
+                        final CancelCheckpointMarker message =
+                                new CancelCheckpointMarker(checkpointMetaData.getCheckpointId());
+                        recordWriter.broadcastEvent(message);
+                    });
+
+            return false;
+        }
     }
 
     private boolean performCheckpoint(

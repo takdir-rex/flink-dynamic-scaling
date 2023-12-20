@@ -82,8 +82,6 @@ public abstract class InputGate
 
     protected final AvailabilityHelper priorityAvailabilityHelper = new AvailabilityHelper();
 
-    private volatile boolean suspended = false;
-
     @Override
     public void setChannelStateWriter(ChannelStateWriter channelStateWriter) {
         for (int index = 0, numChannels = getNumberOfInputChannels();
@@ -156,14 +154,6 @@ public abstract class InputGate
      */
     public CompletableFuture<?> getPriorityEventAvailableFuture() {
         return priorityAvailabilityHelper.getAvailableFuture();
-    }
-
-    public boolean isSuspended() {
-        return suspended;
-    }
-
-    public void setSuspended(boolean suspended) {
-        this.suspended = suspended;
     }
 
     /** Simple pojo for INPUT, DATA and moreAvailable. */

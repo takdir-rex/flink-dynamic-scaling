@@ -22,9 +22,13 @@ import org.apache.flink.runtime.checkpoint.CheckpointMetaData;
 import org.apache.flink.runtime.checkpoint.CheckpointMetricsBuilder;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.channel.ChannelStateWriter;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.state.CheckpointStorageWorkerView;
 import org.apache.flink.runtime.state.TestCheckpointStorageWorkerView;
+import org.apache.flink.streaming.api.operators.OperatorSnapshotFutures;
 
+import java.io.IOException;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /** {@link SubtaskCheckpointCoordinator} implementation for tests. */
@@ -86,6 +90,14 @@ public class TestSubtaskCheckpointCoordinator implements SubtaskCheckpointCoordi
             CheckpointOptions checkpointOptions,
             CheckpointMetricsBuilder checkpointMetrics,
             OperatorChain<?, ?> operatorChain,
+            boolean isTaskFinished,
+            Supplier<Boolean> isRunning) {}
+
+    public void finishAndReportAsync(
+            Map<OperatorID, OperatorSnapshotFutures> snapshotFutures,
+            CheckpointMetaData metadata,
+            CheckpointMetricsBuilder metrics,
+            boolean isTaskDeployedAsFinished,
             boolean isTaskFinished,
             Supplier<Boolean> isRunning) {}
 

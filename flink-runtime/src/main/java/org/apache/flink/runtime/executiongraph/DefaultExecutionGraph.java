@@ -879,7 +879,7 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
 
         if (newParallelism < oldParallelism) {}
 
-        // 3. Also do reconnection to the direct downstreams
+        // 3. Also do reconnection to the first-level downstreams
         for (IntermediateDataSet producedDataSet :
                 rescaledJobVertex.getJobVertex().getProducedDataSets()) {
             for (JobEdge outputEdge : producedDataSet.getConsumers()) {

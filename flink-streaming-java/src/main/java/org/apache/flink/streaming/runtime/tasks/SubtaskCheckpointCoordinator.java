@@ -24,10 +24,13 @@ import org.apache.flink.runtime.checkpoint.CheckpointMetricsBuilder;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.channel.ChannelStateWriter;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.state.CheckpointStorageWorkerView;
+import org.apache.flink.streaming.api.operators.OperatorSnapshotFutures;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -71,6 +74,15 @@ public interface SubtaskCheckpointCoordinator extends Closeable {
             boolean isTaskFinished,
             Supplier<Boolean> isRunning)
             throws Exception;
+
+    void finishAndReportAsync(
+            Map<OperatorID, OperatorSnapshotFutures> snapshotFutures,
+            CheckpointMetaData metadata,
+            CheckpointMetricsBuilder metrics,
+            boolean isTaskDeployedAsFinished,
+            boolean isTaskFinished,
+            Supplier<Boolean> isRunning)
+            throws IOException;
 
     /**
      * Notified on the task side once a distributed checkpoint has been completed.

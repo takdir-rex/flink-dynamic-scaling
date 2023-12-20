@@ -516,7 +516,7 @@ public class Task
 
     public CompletableFuture<Void> updateInputChannels(
             List<InputGateDeploymentDescriptor>
-                    inputGateDeploymentDescriptors) { // the downstreams of the scaled task
+                    inputGateDeploymentDescriptors) { // the second downstreams of the scaled task
         final String taskNameWithSubtaskAndId = taskNameWithSubtask + " (" + executionId + ')';
         final ShuffleIOOwnerContext taskShuffleContext =
                 shuffleEnvironment.createShuffleIOOwnerContext(
@@ -537,6 +537,19 @@ public class Task
             }
             recoverGateFuture = invokable.getRecoverGateFuture();
             runWithSystemExitMonitoring(invokable::recoverGate);
+            recoverGateFuture.thenRun(() -> {
+                for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters) {
+                    if (partitionWriter instanceof PipelinedResultPartition) {
+                        PipelinedResultPartition partition = (PipelinedResultPartition) partitionWriter;
+                        for(ResultSubpartition rp : partition.subpartitions){
+                            if(rp instanceof PipelinedSubpartition){
+                                PipelinedSubpartition pipelinedSubpartition = (PipelinedSubpartition) rp;
+                                pipelinedSubpartition.resumeConsumption();
+                            }
+                        }
+                    }
+                }
+            });
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -544,10 +557,7 @@ public class Task
     }
 
     public void unblockChannels() {
-        // unblock input channels after rescaling
-        for (IndexedInputGate inputGate : inputGates) {
-            inputGate.setSuspended(false);
-        }
+        //not used. recovered tasks already call resumeConsumption. Unrecovered tasks call resumeConsumption after updateInputCannels.
     }
 
     // ------------------------------------------------------------------------

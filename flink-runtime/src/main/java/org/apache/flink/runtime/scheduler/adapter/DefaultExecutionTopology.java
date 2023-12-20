@@ -225,9 +225,7 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                                                 executionGraph.getJobVertex(
                                                         outputEdge.getTarget().getID());
                                         if (sencondDownstreams.add(
-                                                downstreamEjv.getJobVertexId())) { // ensure unique
-                                            // vertex executed
-                                            // once
+                                                downstreamEjv.getJobVertexId())) { // ensure unique vertex executed once
                                             // updateInputChannels
                                             for (ExecutionVertex vtx :
                                                     downstreamEjv.getTaskVertices()) {
@@ -289,9 +287,6 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                         runningFutures.add(vtx.getRunningFuture());
                     }
                 }
-                // uncomment to restart all downstreams until sink
-                //                scheduleDownstreamRestart(downstreamEjv,executionVertexIDS,
-                // runningFutures);
             }
         }
         return downstreams;
