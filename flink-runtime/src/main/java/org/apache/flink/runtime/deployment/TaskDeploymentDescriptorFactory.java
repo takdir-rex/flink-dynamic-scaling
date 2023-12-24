@@ -145,8 +145,8 @@ public class TaskDeploymentDescriptorFactory {
         return inputGates;
     }
 
-    public List<InputGateDeploymentDescriptor> createInputGateDeploymentDescriptors(IntermediateDataSetID intermediateDataSetID)
-            throws IOException {
+    public List<InputGateDeploymentDescriptor> createInputGateDeploymentDescriptors(
+            IntermediateDataSetID intermediateDataSetID) throws IOException {
         List<InputGateDeploymentDescriptor> inputGates =
                 new ArrayList<>(consumedPartitionGroups.size());
 
@@ -164,7 +164,7 @@ public class TaskDeploymentDescriptorFactory {
             IntermediateDataSetID resultId = consumedIntermediateResult.getId();
             ResultPartitionType partitionType = consumedIntermediateResult.getResultType();
 
-            if(!resultId.equals(intermediateDataSetID)){
+            if (!resultId.equals(intermediateDataSetID)) {
                 continue;
             }
 

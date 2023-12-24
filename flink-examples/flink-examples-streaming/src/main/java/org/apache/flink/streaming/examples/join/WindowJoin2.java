@@ -92,7 +92,9 @@ public class WindowJoin2 {
                 CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir.toURI().toString());
         conf.setString(CheckpointingOptions.SAVEPOINT_DIRECTORY, savepointDir.toURI().toString());
 
-        conf.set(ExecutionOptions.BUFFER_TIMEOUT, Duration.ofMillis(ExecutionOptions.FLUSH_AFTER_EVERY_RECORD));
+        conf.set(
+                ExecutionOptions.BUFFER_TIMEOUT,
+                Duration.ofMillis(ExecutionOptions.FLUSH_AFTER_EVERY_RECORD));
 
         // obtain execution environment, run this example in "ingestion time"
         StreamExecutionEnvironment env =

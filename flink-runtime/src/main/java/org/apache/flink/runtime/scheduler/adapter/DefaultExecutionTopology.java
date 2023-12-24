@@ -229,16 +229,27 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                                                 executionGraph.getJobVertex(
                                                         outputEdge.getTarget().getID());
                                         if (sencondDownstreams.add(
-                                                downstreamEjv.getJobVertex())) { // ensure unique vertex executed once
+                                                downstreamEjv
+                                                        .getJobVertex())) { // ensure unique vertex
+                                            // executed once
                                             // updateInputChannels
                                             for (ExecutionVertex vtx :
                                                     downstreamEjv.getTaskVertices()) {
                                                 Execution exVtx = vtx.getCurrentExecutionAttempt();
                                                 try {
-                                                    final List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors =
-                                                            TaskDeploymentDescriptorFactory.fromExecutionVertex(vtx, exVtx.getAttemptNumber())
-                                                                    .createInputGateDeploymentDescriptors(producedDataSet.getId());
-                                                    updateChannelFutures.add(exVtx.updateInputChannels(inputGateDeploymentDescriptors));
+                                                    final List<InputGateDeploymentDescriptor>
+                                                            inputGateDeploymentDescriptors =
+                                                                    TaskDeploymentDescriptorFactory
+                                                                            .fromExecutionVertex(
+                                                                                    vtx,
+                                                                                    exVtx
+                                                                                            .getAttemptNumber())
+                                                                            .createInputGateDeploymentDescriptors(
+                                                                                    producedDataSet
+                                                                                            .getId());
+                                                    updateChannelFutures.add(
+                                                            exVtx.updateInputChannels(
+                                                                    inputGateDeploymentDescriptors));
                                                 } catch (IOException e) {
                                                     throw new RuntimeException(e);
                                                 }

@@ -27,7 +27,6 @@ import org.apache.flink.runtime.state.CheckpointStorageWorkerView;
 import org.apache.flink.runtime.state.TestCheckpointStorageWorkerView;
 import org.apache.flink.streaming.api.operators.OperatorSnapshotFutures;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.function.Supplier;
 

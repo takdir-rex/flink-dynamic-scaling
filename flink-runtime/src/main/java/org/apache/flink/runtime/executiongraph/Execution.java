@@ -1301,7 +1301,8 @@ public class Execution
         return result;
     }
 
-    public CompletableFuture<Void> updateInputChannels(List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors) {
+    public CompletableFuture<Void> updateInputChannels(
+            List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         assertRunningInJobMasterMainThread();
         final LogicalSlot slot = assignedResource;

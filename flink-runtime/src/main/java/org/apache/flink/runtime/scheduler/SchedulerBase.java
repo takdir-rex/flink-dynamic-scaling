@@ -53,7 +53,6 @@ import org.apache.flink.runtime.executiongraph.JobStatusListener;
 import org.apache.flink.runtime.executiongraph.TaskExecutionStateTransition;
 import org.apache.flink.runtime.executiongraph.failover.flip1.ResultPartitionAvailabilityChecker;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
-import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobEdge;
@@ -839,7 +838,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         }
         Set<String> upstreamJobVertexIdsSet = new HashSet<>();
         if (ejv.getJobVertex().isInputVertex()) {
-            //rescaling source operator
+            // rescaling source operator
             upstreamJobVertexIdsSet.add(jobVertexId);
         } else {
             // blocking upstreams of rescaled job vertex
@@ -851,23 +850,23 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
             }
 
             Set<JobVertex> firstLevelDownstreams = new HashSet<>();
-            //collect first downstreams
-            for (ExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()){
-                if(jobVertex.getJobVertex().isDownStreamOf(ejv.getJobVertex())){
+            // collect first downstreams
+            for (ExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()) {
+                if (jobVertex.getJobVertex().isDownStreamOf(ejv.getJobVertex())) {
                     firstLevelDownstreams.add(jobVertex.getJobVertex());
                 }
             }
             Set<JobVertex> secondLevelDownstreams = new HashSet<>();
-            for(JobVertex firstDownstream : firstLevelDownstreams){
-                //collect second downstreams
-                for (ExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()){
-                    if(jobVertex.getJobVertex().isDownStreamOf(firstDownstream)){
+            for (JobVertex firstDownstream : firstLevelDownstreams) {
+                // collect second downstreams
+                for (ExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()) {
+                    if (jobVertex.getJobVertex().isDownStreamOf(firstDownstream)) {
                         secondLevelDownstreams.add(jobVertex.getJobVertex());
                     }
                 }
-                //block the parents of multiple input fist-level downstreams
+                // block the parents of multiple input fist-level downstreams
                 for (JobEdge inputEdge : firstDownstream.getInputs()) {
-                    if (inputEdge.getSource() != null) { //not a source operator
+                    if (inputEdge.getSource() != null) { // not a source operator
                         String upstreamId =
                                 inputEdge.getSource().getProducer().getID().toHexString();
                         if (!upstreamId.equals(jobVertexId)) {
@@ -877,12 +876,12 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                 }
             }
 
-            //block the parents of multiple input second-level downstreams
-            for(JobVertex secondDownstream : secondLevelDownstreams){
+            // block the parents of multiple input second-level downstreams
+            for (JobVertex secondDownstream : secondLevelDownstreams) {
                 for (JobEdge inputEdge : secondDownstream.getInputs()) {
-                    if (inputEdge.getSource() != null) { //not a source operator
+                    if (inputEdge.getSource() != null) { // not a source operator
                         JobVertex upstream = inputEdge.getSource().getProducer();
-                        if(!firstLevelDownstreams.contains(upstream)){
+                        if (!firstLevelDownstreams.contains(upstream)) {
                             upstreamJobVertexIdsSet.add(upstream.getID().toHexString());
                         }
                     }

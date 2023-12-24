@@ -527,9 +527,9 @@ public class Task
                         .toArray(new IndexedInputGate[0]);
         CompletableFuture<Void> recoverGateFuture = null;
         try {
-            for(IndexedInputGate gt : gates){
-                for(IndexedInputGate inGt : inputGates) {
-                    if(gt.getGateIndex() == inGt.getGateIndex()){
+            for (IndexedInputGate gt : gates) {
+                for (IndexedInputGate inGt : inputGates) {
+                    if (gt.getGateIndex() == inGt.getGateIndex()) {
                         InputGateWithMetrics inputGateWithMetrics = (InputGateWithMetrics) inGt;
                         for (int i = 0; i < inputGateWithMetrics.getNumberOfInputChannels(); i++) {
                             inputGateWithMetrics.getChannel(i).releaseAllResources();
@@ -548,7 +548,7 @@ public class Task
     }
 
     public void unblockChannels() {
-        //not used. recovered tasks already call resumeConsumption.
+        // not used. recovered tasks already call resumeConsumption.
     }
 
     // ------------------------------------------------------------------------

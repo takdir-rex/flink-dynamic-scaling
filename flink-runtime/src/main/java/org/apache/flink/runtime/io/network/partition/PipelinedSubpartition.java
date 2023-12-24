@@ -386,7 +386,7 @@ public class PipelinedSubpartition extends ResultSubpartition
 
     public void resumeConsumption() {
         synchronized (buffers) {
-//            checkState(isBlocked, "Should be blocked by checkpoint.");
+            //            checkState(isBlocked, "Should be blocked by checkpoint.");
             isBlocked = false;
         }
     }
