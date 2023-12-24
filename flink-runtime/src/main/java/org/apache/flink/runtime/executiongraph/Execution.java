@@ -1301,7 +1301,7 @@ public class Execution
         return result;
     }
 
-    public CompletableFuture<Void> updateInputChannels() {
+    public CompletableFuture<Void> updateInputChannels(List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         assertRunningInJobMasterMainThread();
         final LogicalSlot slot = assignedResource;
@@ -1314,10 +1314,6 @@ public class Execution
                     getAssignedResourceLocation(),
                     slot.getAllocationId());
             try {
-                final List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors =
-                        TaskDeploymentDescriptorFactory.fromExecutionVertex(vertex, attemptNumber)
-                                .createInputGateDeploymentDescriptors();
-
                 final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
 
                 CompletableFuture<Acknowledge> resultFuture =

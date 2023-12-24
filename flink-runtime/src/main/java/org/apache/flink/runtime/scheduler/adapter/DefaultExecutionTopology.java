@@ -18,8 +18,11 @@
 
 package org.apache.flink.runtime.scheduler.adapter;
 
+import org.apache.flink.runtime.deployment.InputGateDeploymentDescriptor;
+import org.apache.flink.runtime.deployment.TaskDeploymentDescriptorFactory;
 import org.apache.flink.runtime.executiongraph.DefaultExecutionGraph;
 import org.apache.flink.runtime.executiongraph.EdgeManager;
+import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionGraph;
 import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
 import org.apache.flink.runtime.executiongraph.ExecutionVertex;
@@ -53,6 +56,7 @@ import org.apache.flink.util.IterableUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -212,7 +216,7 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                 .thenRun(
                         () -> {
                             List<CompletableFuture> updateChannelFutures = new ArrayList<>();
-                            Set<JobVertexID> sencondDownstreams = new HashSet<>();
+                            Set<JobVertex> sencondDownstreams = new HashSet<>();
                             // update input channels of their second downstreams
                             for (JobVertexID jobVertexID : downstreams) {
                                 for (IntermediateDataSet producedDataSet :
@@ -225,49 +229,24 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                                                 executionGraph.getJobVertex(
                                                         outputEdge.getTarget().getID());
                                         if (sencondDownstreams.add(
-                                                downstreamEjv.getJobVertexId())) { // ensure unique vertex executed once
+                                                downstreamEjv.getJobVertex())) { // ensure unique vertex executed once
                                             // updateInputChannels
                                             for (ExecutionVertex vtx :
                                                     downstreamEjv.getTaskVertices()) {
-                                                updateChannelFutures.add(
-                                                        vtx.getCurrentExecutionAttempt()
-                                                                .updateInputChannels());
+                                                Execution exVtx = vtx.getCurrentExecutionAttempt();
+                                                try {
+                                                    final List<InputGateDeploymentDescriptor> inputGateDeploymentDescriptors =
+                                                            TaskDeploymentDescriptorFactory.fromExecutionVertex(vtx, exVtx.getAttemptNumber())
+                                                                    .createInputGateDeploymentDescriptors(producedDataSet.getId());
+                                                    updateChannelFutures.add(exVtx.updateInputChannels(inputGateDeploymentDescriptors));
+                                                } catch (IOException e) {
+                                                    throw new RuntimeException(e);
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                            //                            CompletableFuture.allOf(
-                            //
-                            // updateChannelFutures.toArray(new CompletableFuture[0]))
-                            //                                    .thenRun(
-                            //                                            () -> {
-                            //                                                for (String blockedId
-                            // : blockedJobIdsHexString) {
-                            //                                                    if
-                            // (!blockedId.equals(rescaledJobIdHexString)) {
-                            //                                                        for
-                            // (ExecutionVertex vertex :
-                            //
-                            // executionGraph
-                            //
-                            //  .getJobVertex(
-                            //
-                            //          JobVertexID
-                            //
-                            //                  .fromHexString(
-                            //
-                            //                          blockedId))
-                            //
-                            //  .getTaskVertices()) {
-                            //
-                            // vertex.getCurrentExecutionAttempt()
-                            //
-                            // .unblockChannels();
-                            //                                                        }
-                            //                                                    }
-                            //                                                }
-                            //                                            });
                         });
     }
 

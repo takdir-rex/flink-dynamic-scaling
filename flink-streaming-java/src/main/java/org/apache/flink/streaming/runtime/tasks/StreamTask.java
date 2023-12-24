@@ -468,6 +468,15 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         }
     }
 
+    private void injectChannelStateWriterIntoRecoveredChannels(IndexedInputGate[] inputGates) {
+        final Environment env = getEnvironment();
+        final ChannelStateWriter channelStateWriter =
+                subtaskCheckpointCoordinator.getChannelStateWriter();
+        for (final InputGate gate : inputGates) {
+            gate.setChannelStateWriter(channelStateWriter);
+        }
+    }
+
     private void injectChannelStateWriterIntoChannels() {
         final Environment env = getEnvironment();
         final ChannelStateWriter channelStateWriter =
@@ -720,7 +729,15 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         isRunning = true;
     }
 
-    public void recoverGate() {
+    public void recoverGate(IndexedInputGate[] inputGates) {
+        try {
+            init();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        ensureNotCanceled();
+
         SequentialChannelStateReader reader =
                 getEnvironment().getTaskStateManager().getSequentialChannelStateReader();
         try {
@@ -734,9 +751,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 Executors.newSingleThreadExecutor(
                         new ExecutorThreadFactory("channel-state-unspilling"));
 
-        injectChannelStateWriterIntoRecoveredChannels();
-
-        IndexedInputGate[] inputGates = getEnvironment().getAllInputGates();
+        injectChannelStateWriterIntoRecoveredChannels(inputGates);
 
         channelIOExecutor.execute(
                 () -> {
@@ -749,6 +764,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 });
 
         mailboxProcessor.resume();
+
+        ensureNotCanceled();
 
         CompletableFuture[] recoverGateCompletionFutures = new CompletableFuture[inputGates.length];
         int i = 0;

@@ -145,6 +145,41 @@ public class TaskDeploymentDescriptorFactory {
         return inputGates;
     }
 
+    public List<InputGateDeploymentDescriptor> createInputGateDeploymentDescriptors(IntermediateDataSetID intermediateDataSetID)
+            throws IOException {
+        List<InputGateDeploymentDescriptor> inputGates =
+                new ArrayList<>(consumedPartitionGroups.size());
+
+        for (ConsumedPartitionGroup consumedPartitionGroup : consumedPartitionGroups) {
+            // If the produced partition has multiple consumers registered, we
+            // need to request the one matching our sub task index.
+            // TODO Refactor after removing the consumers from the intermediate result partitions
+            IntermediateResultPartition resultPartition =
+                    resultPartitionRetriever.apply(consumedPartitionGroup.getFirst());
+
+            int numConsumers = resultPartition.getConsumerVertexGroups().get(0).size();
+
+            int queueToRequest = subtaskIndex % numConsumers;
+            IntermediateResult consumedIntermediateResult = resultPartition.getIntermediateResult();
+            IntermediateDataSetID resultId = consumedIntermediateResult.getId();
+            ResultPartitionType partitionType = consumedIntermediateResult.getResultType();
+
+            if(!resultId.equals(intermediateDataSetID)){
+                continue;
+            }
+
+            inputGates.add(
+                    new InputGateDeploymentDescriptor(
+                            resultId,
+                            partitionType,
+                            queueToRequest,
+                            getConsumedPartitionShuffleDescriptors(
+                                    consumedIntermediateResult, consumedPartitionGroup)));
+        }
+
+        return inputGates;
+    }
+
     private MaybeOffloaded<ShuffleDescriptor[]> getConsumedPartitionShuffleDescriptors(
             IntermediateResult intermediateResult, ConsumedPartitionGroup consumedPartitionGroup)
             throws IOException {

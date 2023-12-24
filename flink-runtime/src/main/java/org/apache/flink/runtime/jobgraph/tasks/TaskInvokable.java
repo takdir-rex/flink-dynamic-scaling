@@ -17,6 +17,7 @@
 package org.apache.flink.runtime.jobgraph.tasks;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 
 import javax.annotation.Nullable;
@@ -109,7 +110,7 @@ public interface TaskInvokable {
     // reload number of channels after parallelism changes
     default void reloadRecordWriters() {};
 
-    default void recoverGate() {};
+    default void recoverGate(IndexedInputGate[] indexedInputGates) {};
 
     default CompletableFuture<Void> getRecoverGateFuture() {
         return null;

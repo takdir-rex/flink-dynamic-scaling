@@ -527,29 +527,20 @@ public class Task
                         .toArray(new IndexedInputGate[0]);
         CompletableFuture<Void> recoverGateFuture = null;
         try {
-            for (int i = 0; i < this.inputGates.length; i++) {
-                InputGateWithMetrics inputGateWithMetrics = (InputGateWithMetrics) inputGates[i];
-                for (int j = 0; j < inputGateWithMetrics.getNumberOfInputChannels(); j++) {
-                    inputGateWithMetrics.getChannel(j).releaseAllResources();
-                }
-                inputGateWithMetrics.setInputGate(gates[i]);
-                inputGateWithMetrics.setup();
-            }
-            recoverGateFuture = invokable.getRecoverGateFuture();
-            runWithSystemExitMonitoring(invokable::recoverGate);
-            recoverGateFuture.thenRun(() -> {
-                for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters) {
-                    if (partitionWriter instanceof PipelinedResultPartition) {
-                        PipelinedResultPartition partition = (PipelinedResultPartition) partitionWriter;
-                        for(ResultSubpartition rp : partition.subpartitions){
-                            if(rp instanceof PipelinedSubpartition){
-                                PipelinedSubpartition pipelinedSubpartition = (PipelinedSubpartition) rp;
-                                pipelinedSubpartition.resumeConsumption();
-                            }
+            for(IndexedInputGate gt : gates){
+                for(IndexedInputGate inGt : inputGates) {
+                    if(gt.getGateIndex() == inGt.getGateIndex()){
+                        InputGateWithMetrics inputGateWithMetrics = (InputGateWithMetrics) inGt;
+                        for (int i = 0; i < inputGateWithMetrics.getNumberOfInputChannels(); i++) {
+                            inputGateWithMetrics.getChannel(i).releaseAllResources();
                         }
+                        inputGateWithMetrics.setInputGate(gt);
+                        inputGateWithMetrics.setup();
                     }
                 }
-            });
+            }
+            recoverGateFuture = invokable.getRecoverGateFuture();
+            runWithSystemExitMonitoring(() -> invokable.recoverGate(gates));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -557,7 +548,7 @@ public class Task
     }
 
     public void unblockChannels() {
-        //not used. recovered tasks already call resumeConsumption. Unrecovered tasks call resumeConsumption after updateInputCannels.
+        //not used. recovered tasks already call resumeConsumption.
     }
 
     // ------------------------------------------------------------------------
