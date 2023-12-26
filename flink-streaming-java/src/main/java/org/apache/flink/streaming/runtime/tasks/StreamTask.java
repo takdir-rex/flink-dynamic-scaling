@@ -1356,8 +1356,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                         .getBlockedJobVertexIdsForRescaling()
                         .contains(jobVertexId)) { // initiators
                     if (jobVertexId.equals(rescaledJobVertexId)) { // if source
-                        if (performCheckpoint(
+                        if (finishCheckpoint(
                                 checkpointMetaData, checkpointOptions, checkpointMetrics)) {
+                            sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
                             if (isCurrentSavepointWithoutDrain(
                                     checkpointMetaData.getCheckpointId())) {
                                 runSynchronousSavepointMailboxLoop();
@@ -1368,16 +1369,18 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                         sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
                     }
                 } else if (jobVertexId.equals(rescaledJobVertexId)) { // rescaled task not a source
-                    if (performCheckpoint(
+                    if (finishCheckpoint(
                             checkpointMetaData, checkpointOptions, checkpointMetrics)) {
+                        sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
                         if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
                             runSynchronousSavepointMailboxLoop();
                         }
                     }
                 } else if (isFirstLevelDownstreamOf(
                         rescaledJobVertexId)) { // first-level downstream
-                    if (performCheckpoint(
+                    if (finishCheckpoint(
                             checkpointMetaData, checkpointOptions, checkpointMetrics)) {
+                        sendCheckpointBarrier(checkpointMetaData, checkpointOptions);
                         if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
                             runSynchronousSavepointMailboxLoop();
                         }
