@@ -202,8 +202,8 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         }
 
         // also schedule restart for direct downstream tasks
-        Set<JobVertexID> downstreams =
-                scheduleDownstreamRestart(rescaledEjv, executionVertexIDS, runningFutures);
+//        Set<JobVertexID> downstreams =
+//                scheduleDownstreamRestart(rescaledEjv, executionVertexIDS, runningFutures);
 
         // restart tasks
         CompletableFuture.allOf(subpartitionFutures.toArray(new CompletableFuture[0]))
@@ -217,42 +217,38 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                         () -> {
                             List<CompletableFuture> updateChannelFutures = new ArrayList<>();
                             Set<JobVertex> sencondDownstreams = new HashSet<>();
-                            // update input channels of their second downstreams
-                            for (JobVertexID jobVertexID : downstreams) {
-                                for (IntermediateDataSet producedDataSet :
-                                        executionGraph
-                                                .getJobVertex(jobVertexID)
-                                                .getJobVertex()
-                                                .getProducedDataSets()) {
-                                    for (JobEdge outputEdge : producedDataSet.getConsumers()) {
-                                        ExecutionJobVertex downstreamEjv =
-                                                executionGraph.getJobVertex(
-                                                        outputEdge.getTarget().getID());
-                                        if (sencondDownstreams.add(
-                                                downstreamEjv
-                                                        .getJobVertex())) { // ensure unique vertex
-                                            // executed once
-                                            // updateInputChannels
-                                            for (ExecutionVertex vtx :
-                                                    downstreamEjv.getTaskVertices()) {
-                                                Execution exVtx = vtx.getCurrentExecutionAttempt();
-                                                try {
-                                                    final List<InputGateDeploymentDescriptor>
-                                                            inputGateDeploymentDescriptors =
-                                                                    TaskDeploymentDescriptorFactory
-                                                                            .fromExecutionVertex(
-                                                                                    vtx,
-                                                                                    exVtx
-                                                                                            .getAttemptNumber())
-                                                                            .createInputGateDeploymentDescriptors(
-                                                                                    producedDataSet
-                                                                                            .getId());
-                                                    updateChannelFutures.add(
-                                                            exVtx.updateInputChannels(
-                                                                    inputGateDeploymentDescriptors));
-                                                } catch (IOException e) {
-                                                    throw new RuntimeException(e);
-                                                }
+                            for (IntermediateDataSet producedDataSet :
+                                            rescaledEjv
+                                            .getJobVertex()
+                                            .getProducedDataSets()) {
+                                for (JobEdge outputEdge : producedDataSet.getConsumers()) {
+                                    ExecutionJobVertex downstreamEjv =
+                                            executionGraph.getJobVertex(
+                                                    outputEdge.getTarget().getID());
+                                    if (sencondDownstreams.add(
+                                            downstreamEjv
+                                                    .getJobVertex())) { // ensure unique vertex
+                                        // executed once
+                                        // updateInputChannels
+                                        for (ExecutionVertex vtx :
+                                                downstreamEjv.getTaskVertices()) {
+                                            Execution exVtx = vtx.getCurrentExecutionAttempt();
+                                            try {
+                                                final List<InputGateDeploymentDescriptor>
+                                                        inputGateDeploymentDescriptors =
+                                                                TaskDeploymentDescriptorFactory
+                                                                        .fromExecutionVertex(
+                                                                                vtx,
+                                                                                exVtx
+                                                                                        .getAttemptNumber())
+                                                                        .createInputGateDeploymentDescriptors(
+                                                                                producedDataSet
+                                                                                        .getId());
+                                                updateChannelFutures.add(
+                                                        exVtx.updateInputChannels(
+                                                                inputGateDeploymentDescriptors));
+                                            } catch (IOException e) {
+                                                throw new RuntimeException(e);
                                             }
                                         }
                                     }
@@ -271,11 +267,11 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                 ExecutionJobVertex downstreamEjv =
                         executionGraph.getJobVertex(outputEdge.getTarget().getID());
                 if (downstreams.add(downstreamEjv.getJobVertexId())) {
-                    for (ExecutionVertex vtx : downstreamEjv.getTaskVertices()) {
-                        executionVertexIDS.add(vtx.getID());
-                        vtx.startListenRunningFuture();
-                        runningFutures.add(vtx.getRunningFuture());
-                    }
+//                    for (ExecutionVertex vtx : downstreamEjv.getTaskVertices()) {
+//                        executionVertexIDS.add(vtx.getID());
+//                        vtx.startListenRunningFuture();
+//                        runningFutures.add(vtx.getRunningFuture());
+//                    }
                 }
             }
         }

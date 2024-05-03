@@ -244,19 +244,19 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
                 } else {
                     if (jobVertex.getJobVertex().isDownStreamOf(rescaledTask.getJobVertex())) {
                         targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
-                        firstLevelDownstreams.add(jobVertex);
+//                        firstLevelDownstreams.add(jobVertex);
                     }
                 }
             }
             // add second-level downstreams as terminator
-            for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
-                for (ExecutionJobVertex first : firstLevelDownstreams) {
-                    if (jobVertex.getJobVertex().isDownStreamOf(first.getJobVertex())) {
-                        targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
-                        break;
-                    }
-                }
-            }
+//            for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
+//                for (ExecutionJobVertex first : firstLevelDownstreams) {
+//                    if (jobVertex.getJobVertex().isDownStreamOf(first.getJobVertex())) {
+//                        targetedTasks.addAll(Arrays.asList(jobVertex.getTaskVertices()));
+//                        break;
+//                    }
+//                }
+//            }
         } else {
             for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
                 if (jobVertex.getJobVertex().isInputVertex()
