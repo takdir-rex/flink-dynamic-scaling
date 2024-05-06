@@ -95,7 +95,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -323,67 +322,60 @@ public class StreamGraphGenerator {
 
         // load user provided snapshot group config
         Configuration config = (Configuration) configuration;
-        List<Integer> sgIndexes = new ArrayList<>();
-        String sgsString = config.getString("g", "");
-        for (String sgIdxStr : sgsString.split(",")) {
-            if (!sgIdxStr.trim().isEmpty()) {
-                sgIndexes.add(Integer.valueOf(sgIdxStr));
-            }
-        }
-        Collections.sort(sgIndexes, Collections.reverseOrder());
-        LOG.info("Snapshot Groups Indexes: {}", sgIndexes);
 
         Collection<StreamNode> streamNodes = streamGraph.getStreamNodes();
         LOG.info("Number of Stream Nodes: {}", streamNodes.size());
-        int counter = 0;
-        for (StreamNode node : streamNodes) {
-            String slotSharing = UUID.randomUUID().toString(); // unique slot name
-            for (Integer sgIdx : sgIndexes) {
-                if (counter >= sgIdx) {
-                    node.setSnapshotGroup("snapshot-" + sgIdx);
-                    slotSharing = "snapshot-" + sgIdx;
-                    break;
+
+        Map<Integer, Integer> sgMap = new HashMap<>();
+        String sgsString = config.getString("g", "");
+        if (!sgsString.isEmpty()) {
+            for (String sg : sgsString.split(";")) {
+                String[] sgEl = sg.split(":");
+                Integer region = Integer.valueOf(sgEl[0]);
+                for (String idx : sgEl[1].split(",")) {
+                    sgMap.put(Integer.valueOf(idx), region);
                 }
             }
-            LOG.info(
-                    "Node {}: {}, SG: {}",
-                    counter,
-                    node.getOperatorName(),
-                    node.getSnapshotGroup());
+            LOG.info("Snapshot Groups Indexes: {}", sgMap);
+        }
+        Map<Integer, Integer> slotMap = new HashMap<>();
+        String slotString = config.getString("ss", "");
+        if (!slotString.isEmpty()) {
+            for (String sl : slotString.split(";")) {
+                String[] slEl = sl.split(":");
+                Integer slot = Integer.valueOf(slEl[0]);
+                for (String idx : slEl[1].split(",")) {
+                    slotMap.put(Integer.valueOf(idx), slot);
+                }
+            }
+            LOG.info("Slot SHaring Groups Indexes: {}", slotMap);
+        }
+
+        for (StreamNode node : streamNodes) {
+            if (node.getSnapshotGroup() == null && !sgMap.isEmpty()) {
+                node.setSnapshotGroup("snapshot-" + sgMap.get(node.getId()));
+            }
+            String slotSharing = "slot-" + node.getSnapshotGroup();
+            if (!slotMap.isEmpty()) {
+                slotSharing = "slot-" + slotMap.get(node.getId());
+            }
             node.setSlotSharingGroup(slotSharing);
+
+            LOG.info(
+                    "Node {}: {}, SG: {}, SL: {}",
+                    node.getId(),
+                    node.getOperatorName(),
+                    node.getSnapshotGroup(),
+                    node.getSlotSharingGroup());
+        }
+
+        for (StreamNode node : streamNodes) {
             if (node.getInEdges().stream().anyMatch(this::shouldDisableUnalignedCheckpointing)) {
                 for (StreamEdge edge : node.getInEdges()) {
                     edge.setSupportsUnalignedCheckpoints(false);
                 }
             }
-            counter++;
         }
-
-        // for q8 nexmark
-        //        for (StreamNode node : streamNodes) {
-        //            String slotSharing = UUID.randomUUID().toString(); //unique slot name
-        //            if(counter >= 2 && counter <= 5){
-        //                node.setSnapshotGroup("snapshot-1");
-        //                slotSharing = "snapshot-1";
-        //            }
-        //            if(counter >= 7 && counter <= 10){
-        //                node.setSnapshotGroup("snapshot-1");
-        //                slotSharing = "snapshot-1";
-        //            }
-        //            if(counter >= 11){
-        //                node.setSnapshotGroup("snapshot-2");
-        //                slotSharing = "snapshot-2";
-        //            }
-        //
-        //            node.setSlotSharingGroup(slotSharing);
-        //            if
-        // (node.getInEdges().stream().anyMatch(this::shouldDisableUnalignedCheckpointing)) {
-        //                for (StreamEdge edge : node.getInEdges()) {
-        //                    edge.setSupportsUnalignedCheckpoints(false);
-        //                }
-        //            }
-        //            counter++;
-        //        }
 
         final StreamGraph builtStreamGraph = streamGraph;
 

@@ -202,8 +202,9 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         }
 
         // also schedule restart for direct downstream tasks
-//        Set<JobVertexID> downstreams =
-//                scheduleDownstreamRestart(rescaledEjv, executionVertexIDS, runningFutures);
+        //        Set<JobVertexID> downstreams =
+        //                scheduleDownstreamRestart(rescaledEjv, executionVertexIDS,
+        // runningFutures);
 
         // restart tasks
         CompletableFuture.allOf(subpartitionFutures.toArray(new CompletableFuture[0]))
@@ -218,16 +219,13 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                             List<CompletableFuture> updateChannelFutures = new ArrayList<>();
                             Set<JobVertex> sencondDownstreams = new HashSet<>();
                             for (IntermediateDataSet producedDataSet :
-                                            rescaledEjv
-                                            .getJobVertex()
-                                            .getProducedDataSets()) {
+                                    rescaledEjv.getJobVertex().getProducedDataSets()) {
                                 for (JobEdge outputEdge : producedDataSet.getConsumers()) {
                                     ExecutionJobVertex downstreamEjv =
                                             executionGraph.getJobVertex(
                                                     outputEdge.getTarget().getID());
                                     if (sencondDownstreams.add(
-                                            downstreamEjv
-                                                    .getJobVertex())) { // ensure unique vertex
+                                            downstreamEjv.getJobVertex())) { // ensure unique vertex
                                         // executed once
                                         // updateInputChannels
                                         for (ExecutionVertex vtx :
@@ -267,11 +265,12 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                 ExecutionJobVertex downstreamEjv =
                         executionGraph.getJobVertex(outputEdge.getTarget().getID());
                 if (downstreams.add(downstreamEjv.getJobVertexId())) {
-//                    for (ExecutionVertex vtx : downstreamEjv.getTaskVertices()) {
-//                        executionVertexIDS.add(vtx.getID());
-//                        vtx.startListenRunningFuture();
-//                        runningFutures.add(vtx.getRunningFuture());
-//                    }
+                    //                    for (ExecutionVertex vtx :
+                    // downstreamEjv.getTaskVertices()) {
+                    //                        executionVertexIDS.add(vtx.getID());
+                    //                        vtx.startListenRunningFuture();
+                    //                        runningFutures.add(vtx.getRunningFuture());
+                    //                    }
                 }
             }
         }
