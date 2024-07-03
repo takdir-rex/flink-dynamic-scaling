@@ -327,46 +327,65 @@ public class StreamGraphGenerator {
         LOG.info("Number of Stream Nodes: {}", streamNodes.size());
 
         Map<Integer, Integer> sgMap = new HashMap<>();
-        String sgsString = config.getString("g", "");
-        if (!sgsString.isEmpty()) {
-            for (String sg : sgsString.split(";")) {
-                String[] sgEl = sg.split(":");
-                Integer region = Integer.valueOf(sgEl[0]);
-                for (String idx : sgEl[1].split(",")) {
-                    sgMap.put(Integer.valueOf(idx), region);
-                }
-            }
-            LOG.info("Snapshot Groups Indexes: {}", sgMap);
-        }
+//        String sgsString = config.getString("g", "");
+//        if (!sgsString.isEmpty()) {
+//            for (String sg : sgsString.split(";")) {
+//                String[] sgEl = sg.split(":");
+//                Integer region = Integer.valueOf(sgEl[0]);
+//                for (String idx : sgEl[1].split(",")) {
+//                    sgMap.put(Integer.valueOf(idx), region);
+//                }
+//            }
+//            LOG.info("Snapshot Groups Indexes: {}", sgMap);
+//        }
+
         Map<Integer, Integer> slotMap = new HashMap<>();
-        String slotString = config.getString("ss", "");
-        if (!slotString.isEmpty()) {
-            for (String sl : slotString.split(";")) {
-                String[] slEl = sl.split(":");
-                Integer slot = Integer.valueOf(slEl[0]);
-                for (String idx : slEl[1].split(",")) {
-                    slotMap.put(Integer.valueOf(idx), slot);
+//        String slotString = config.getString("ss", "");
+//        if (!slotString.isEmpty()) {
+//            for (String sl : slotString.split(";")) {
+//                String[] slEl = sl.split(":");
+//                Integer slot = Integer.valueOf(slEl[0]);
+//                for (String idx : slEl[1].split(",")) {
+//                    slotMap.put(Integer.valueOf(idx), slot);
+//                }
+//            }
+//            LOG.info("Slot Sharing Groups Indexes: {}", slotMap);
+//        }
+
+        Map<Integer, Integer> parallelismMap = new HashMap<>();
+        String parallelismString = config.getString("g", "");
+        if (!parallelismString.isEmpty()) {
+            for (String par : parallelismString.split(";")) {
+                String[] parEl = par.split(":");
+                Integer p = Integer.valueOf(parEl[0]);
+                for (String idx : parEl[1].split(",")) {
+                    parallelismMap.put(Integer.valueOf(idx), p);
                 }
             }
-            LOG.info("Slot SHaring Groups Indexes: {}", slotMap);
+            LOG.info("Parallelism Indexes: {}", parallelismMap);
         }
 
         for (StreamNode node : streamNodes) {
             if (node.getSnapshotGroup() == null && !sgMap.isEmpty()) {
                 node.setSnapshotGroup("snapshot-" + sgMap.get(node.getId()));
             }
-            String slotSharing = "slot-" + node.getSnapshotGroup();
-            if (!slotMap.isEmpty()) {
-                slotSharing = "slot-" + slotMap.get(node.getId());
+            Integer slotSharing = slotMap.get(node.getId());
+            if (slotSharing != null) {
+                node.setSlotSharingGroup("slot-" + slotSharing);
             }
-            node.setSlotSharingGroup(slotSharing);
+
+            Integer newPar = parallelismMap.get(node.getId());
+            if (newPar != null) {
+                node.setParallelism(newPar);
+            }
 
             LOG.info(
-                    "Node {}: {}, SG: {}, SL: {}",
+                    "Node {}: {}, SG: {}, SL: {}, P: {}",
                     node.getId(),
                     node.getOperatorName(),
                     node.getSnapshotGroup(),
-                    node.getSlotSharingGroup());
+                    node.getSlotSharingGroup(),
+                    node.getParallelism());
         }
 
         for (StreamNode node : streamNodes) {
