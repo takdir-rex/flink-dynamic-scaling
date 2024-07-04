@@ -355,18 +355,18 @@ public class StreamGraphGenerator {
             if (node.getSnapshotGroup() == null && !sgMap.isEmpty()) {
                 node.setSnapshotGroup("snapshot-" + sgMap.get(node.getId()));
             }
-            String slotSharing = "slot-" + node.getSnapshotGroup();
-            if (!slotMap.isEmpty()) {
-                slotSharing = "slot-" + slotMap.get(node.getId());
+            Integer slotSharing = slotMap.get(node.getId());
+            if (slotSharing != null) {
+                node.setSlotSharingGroup("slot-" + slotSharing);
             }
-            node.setSlotSharingGroup(slotSharing);
 
             LOG.info(
-                    "Node {}: {}, SG: {}, SL: {}",
+                    "Node {}: {}, SG: {}, SL: {}, P: {}",
                     node.getId(),
                     node.getOperatorName(),
                     node.getSnapshotGroup(),
-                    node.getSlotSharingGroup());
+                    node.getSlotSharingGroup(),
+                    node.getParallelism());
         }
 
         for (StreamNode node : streamNodes) {
