@@ -256,36 +256,38 @@ public class ExecutionJobVertex
         }
     }
 
-    public void changeParallelism(int newParallelism) {
+    public List<ExecutionVertex> changeParallelism(int newParallelism) {
         int oldParallelism = this.parallelismInfo.getParallelism();
-        if (newParallelism == oldParallelism) {
-            return;
-        }
         this.jobVertex.setParallelism(newParallelism);
         this.parallelismInfo.setParallelism(newParallelism);
+
+        List<ExecutionVertex> affectedVertices = new ArrayList<>();
 
         if (newParallelism > oldParallelism) {
             for (int i = 0; i < newParallelism - oldParallelism; i++) {
                 for (IntermediateResult ires : this.producedDataSets) {
+                    //add more partitions
                     ires.increaseParallelism();
                 }
-                increaseParallelism();
+                //create new ExecutionVertex
+                affectedVertices.add(increaseParallelism());
             }
         } else {
             for (int i = 0; i < oldParallelism - newParallelism; i++) {
                 for (IntermediateResult ires : this.producedDataSets) {
                     ires.decreaseParallelism();
                 }
-                decreaseParallelism();
+                affectedVertices.add(decreaseParallelism());
             }
         }
 
         // make the existing blob key to null to overwrite stored task information in the blob
         // server
         this.taskInformationOrBlobKey = null;
+        return affectedVertices;
     }
 
-    private void increaseParallelism() {
+    private ExecutionVertex increaseParallelism() {
         ExecutionVertex lastVertex = this.taskVertices.get(this.taskVertices.size() - 1);
         int newSubTaskIndex = lastVertex.getParallelSubtaskIndex() + 1;
         ExecutionVertex newExecutionVertex =
@@ -299,10 +301,11 @@ public class ExecutionJobVertex
                         initialAttemptCounts.getAttemptCount(newSubTaskIndex));
 
         this.taskVertices.add(newExecutionVertex);
+        return newExecutionVertex;
     }
 
-    private void decreaseParallelism() {
-        this.taskVertices.remove(taskVertices.size() - 1);
+    private ExecutionVertex decreaseParallelism() {
+        return this.taskVertices.remove(taskVertices.size() - 1);
     }
 
     /**

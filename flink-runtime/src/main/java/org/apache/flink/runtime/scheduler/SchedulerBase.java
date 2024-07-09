@@ -832,10 +832,6 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         if (newParallelism == ejv.getParallelism()) {
             return CompletableFuture.completedFuture(Acknowledge.get());
         }
-        if (newParallelism < ejv.getParallelism()) {
-            // currently unsupported
-            return CompletableFuture.completedFuture(Acknowledge.get());
-        }
         Set<String> upstreamJobVertexIdsSet = new HashSet<>();
         if (ejv.getJobVertex().isInputVertex()) {
             // rescaling source operator
@@ -856,14 +852,14 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                     firstLevelDownstreams.add(jobVertex.getJobVertex());
                 }
             }
-            Set<JobVertex> secondLevelDownstreams = new HashSet<>();
+//            Set<JobVertex> secondLevelDownstreams = new HashSet<>();
             for (JobVertex firstDownstream : firstLevelDownstreams) {
                 // collect second downstreams
-                for (ExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()) {
-                    if (jobVertex.getJobVertex().isDownStreamOf(firstDownstream)) {
-                        secondLevelDownstreams.add(jobVertex.getJobVertex());
-                    }
-                }
+//                for (ExecutionJobVertex jobVertex : executionGraph.getVerticesTopologically()) {
+//                    if (jobVertex.getJobVertex().isDownStreamOf(firstDownstream)) {
+//                        secondLevelDownstreams.add(jobVertex.getJobVertex());
+//                    }
+//                }
                 // block the parents of multiple input fist-level downstreams
                 for (JobEdge inputEdge : firstDownstream.getInputs()) {
                     if (inputEdge.getSource() != null) { // not a source operator
@@ -877,16 +873,16 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
             }
 
             // block the parents of multiple input second-level downstreams
-            for (JobVertex secondDownstream : secondLevelDownstreams) {
-                for (JobEdge inputEdge : secondDownstream.getInputs()) {
-                    if (inputEdge.getSource() != null) { // not a source operator
-                        JobVertex upstream = inputEdge.getSource().getProducer();
-                        if (!firstLevelDownstreams.contains(upstream)) {
-                            upstreamJobVertexIdsSet.add(upstream.getID().toHexString());
-                        }
-                    }
-                }
-            }
+//            for (JobVertex secondDownstream : secondLevelDownstreams) {
+//                for (JobEdge inputEdge : secondDownstream.getInputs()) {
+//                    if (inputEdge.getSource() != null) { // not a source operator
+//                        JobVertex upstream = inputEdge.getSource().getProducer();
+//                        if (!firstLevelDownstreams.contains(upstream)) {
+//                            upstreamJobVertexIdsSet.add(upstream.getID().toHexString());
+//                        }
+//                    }
+//                }
+//            }
         }
 
         StringBuilder upstreamJobVertexIds = new StringBuilder();

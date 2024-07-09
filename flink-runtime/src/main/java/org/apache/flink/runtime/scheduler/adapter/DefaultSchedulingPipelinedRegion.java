@@ -65,6 +65,10 @@ public class DefaultSchedulingPipelinedRegion implements SchedulingPipelinedRegi
         executionVertices.putAll(vertices);
     }
 
+    public DefaultExecutionVertex removeVertex(final ExecutionVertexID vertexId) {
+        return executionVertices.remove(vertexId);
+    }
+
     @Override
     public Iterable<DefaultExecutionVertex> getVertices() {
         return Collections.unmodifiableCollection(executionVertices.values());

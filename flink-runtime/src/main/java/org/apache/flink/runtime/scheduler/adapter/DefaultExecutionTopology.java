@@ -154,27 +154,41 @@ public class DefaultExecutionTopology implements SchedulingTopology {
             String rescaledJobIdHexString, int newParallelism, String[] blockedJobIdsHexString) {
         final ExecutionJobVertex rescaledEjv =
                 executionGraph.getJobVertex(JobVertexID.fromHexString(rescaledJobIdHexString));
+        final boolean scaleOut = newParallelism > rescaledEjv.getParallelism();
+        final boolean scaleIn = newParallelism < rescaledEjv.getParallelism();
+
+        System.out.println("$$$$ " + scaleIn);
+
         // 1. update execution graph and topology at Job Manager
-        List<ExecutionVertex> newVertices =
+        List<ExecutionVertex> affectedVertices =
                 executionGraph.changeParallelism(rescaledEjv, newParallelism);
 
-        // add new vertices as new members of region
-        List<ExecutionVertexID> newVerticesID =
-                newVertices.stream().map(ExecutionVertex::getID).collect(Collectors.toList());
-        List<SchedulingExecutionVertex> newSchedulingExecutionVertices =
-                new ArrayList<>(newVertices.size());
-        for (ExecutionVertexID id : newVerticesID) {
-            newSchedulingExecutionVertices.add(executionVerticesById.get(id));
-        }
         PipelinedRegionSchedulingStrategy pipelinedRegionSchedulingStrategy =
                 (PipelinedRegionSchedulingStrategy) schedulingStrategy;
-        for (SchedulingExecutionVertex vertex : newSchedulingExecutionVertices) {
-            final SchedulingPipelinedRegion region =
-                    this.getPipelinedRegionOfVertex(vertex.getId());
-            pipelinedRegionSchedulingStrategy
-                    .getRegionVerticesSorted()
-                    .get(region)
-                    .add(vertex.getId());
+
+        List<SchedulingExecutionVertex> newSchedulingExecutionVertices =
+                new ArrayList<>(affectedVertices.size());
+
+        if(scaleOut) {
+            // add new vertices as new members of region
+            List<ExecutionVertexID> newVerticesID =
+                    affectedVertices.stream().map(ExecutionVertex::getID).collect(Collectors.toList());
+
+            for (ExecutionVertexID id : newVerticesID) {
+                newSchedulingExecutionVertices.add(executionVerticesById.get(id));
+            }
+
+            for (SchedulingExecutionVertex vertex : newSchedulingExecutionVertices) {
+                final SchedulingPipelinedRegion region =
+                        this.getPipelinedRegionOfVertex(vertex.getId());
+                List<ExecutionVertexID> regionMembers =
+                pipelinedRegionSchedulingStrategy
+                        .getRegionVerticesSorted()
+                        .get(region);
+                if(!regionMembers.contains(vertex.getId())){
+                    regionMembers.add(vertex.getId());
+                }
+            }
         }
 
         List<CompletableFuture> subpartitionFutures = new ArrayList<>();
@@ -188,8 +202,11 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         final DefaultScheduler scheduler =
                 (DefaultScheduler) pipelinedRegionSchedulingStrategy.getSchedulerOperations();
 
-        // request slot for newly created instances
-        scheduler.requestNewSlots(newSchedulingExecutionVertices);
+        if(scaleOut){
+            // request slot for newly created instances
+            scheduler.requestNewSlots(newSchedulingExecutionVertices);
+        }
+
 
         // futures for waiting restarted tasks to be running
         List<CompletableFuture> runningFutures = new ArrayList<>();
@@ -210,6 +227,11 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         CompletableFuture.allOf(subpartitionFutures.toArray(new CompletableFuture[0]))
                 .thenRun(
                         () -> {
+                            if(scaleIn){
+                                for(ExecutionVertex vertex : affectedVertices){
+                                    vertex.cancel();
+                                }
+                            }
                             scheduler.restartTasksForRescaling(executionVertexIDS);
                         });
 
@@ -372,6 +394,30 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         }
         pipelinedRegion.addVertices(newVertices); // in computePipelinedRegions
         return newVertices.values().stream().collect(Collectors.toList());
+    }
+
+    public List<SchedulingExecutionVertex> removeExecutionVertices(List<ExecutionVertex> removedExecutionVertices) {
+        // computeExecutionGraphIndex and computePipelinedRegions
+        List<SchedulingExecutionVertex> removedSchedulingExecutionVertices = new ArrayList<>();
+        PipelinedRegionSchedulingStrategy pipelinedRegionSchedulingStrategy =
+                (PipelinedRegionSchedulingStrategy) schedulingStrategy;
+        for (ExecutionVertex vertex : removedExecutionVertices) {
+            DefaultSchedulingPipelinedRegion pipelinedRegion = this.getPipelinedRegionOfVertex(vertex.getID());
+            for(IntermediateResultPartitionID resId : vertex.getProducedPartitions().keySet()){
+                resultPartitionsById.remove(resId);
+            }
+            DefaultExecutionVertex schedulingVertex = executionVerticesById.remove(vertex.getID());
+            removedSchedulingExecutionVertices.add(schedulingVertex);
+            executionVerticesList.remove(schedulingVertex);
+            pipelinedRegionsByVertex.remove(vertex.getID());
+
+            pipelinedRegion.removeVertex(vertex.getID());
+
+            pipelinedRegionSchedulingStrategy
+                    .getRegionVerticesSorted()
+                    .get(pipelinedRegion).remove(vertex.getID());
+        }
+        return removedSchedulingExecutionVertices;
     }
 
     private static ExecutionGraphIndex computeExecutionGraphIndex(

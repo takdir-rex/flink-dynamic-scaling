@@ -73,6 +73,12 @@ public class RegionPartitionGroupReleaseStrategy implements PartitionGroupReleas
         // initPartitionGroupConsumerRegions() --> not supported for blocking partition yet
     }
 
+    public void removeExecutionVertices(List<ExecutionVertexID> vertexIds) {
+        for (ExecutionVertexID vertexID : vertexIds) {
+            regionExecutionViewByVertex.remove(vertexID);
+        }
+    }
+
     private void initRegionExecutionViewByVertex() {
         for (SchedulingPipelinedRegion pipelinedRegion :
                 schedulingTopology.getAllPipelinedRegions()) {
