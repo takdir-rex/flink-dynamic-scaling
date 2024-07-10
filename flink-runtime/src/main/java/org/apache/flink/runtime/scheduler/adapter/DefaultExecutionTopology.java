@@ -157,8 +157,6 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         final boolean scaleOut = newParallelism > rescaledEjv.getParallelism();
         final boolean scaleIn = newParallelism < rescaledEjv.getParallelism();
 
-        System.out.println("$$$$ " + scaleIn);
-
         // 1. update execution graph and topology at Job Manager
         List<ExecutionVertex> affectedVertices =
                 executionGraph.changeParallelism(rescaledEjv, newParallelism);
@@ -166,19 +164,20 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         PipelinedRegionSchedulingStrategy pipelinedRegionSchedulingStrategy =
                 (PipelinedRegionSchedulingStrategy) schedulingStrategy;
 
-        List<SchedulingExecutionVertex> newSchedulingExecutionVertices =
+        List<SchedulingExecutionVertex> affectedSchedulingExecutionVertices =
                 new ArrayList<>(affectedVertices.size());
+
+        List<ExecutionVertexID> affectedVerticesID =
+                affectedVertices.stream().map(ExecutionVertex::getID).collect(Collectors.toList());
 
         if(scaleOut) {
             // add new vertices as new members of region
-            List<ExecutionVertexID> newVerticesID =
-                    affectedVertices.stream().map(ExecutionVertex::getID).collect(Collectors.toList());
 
-            for (ExecutionVertexID id : newVerticesID) {
-                newSchedulingExecutionVertices.add(executionVerticesById.get(id));
+            for (ExecutionVertexID id : affectedVerticesID) {
+                affectedSchedulingExecutionVertices.add(executionVerticesById.get(id));
             }
 
-            for (SchedulingExecutionVertex vertex : newSchedulingExecutionVertices) {
+            for (SchedulingExecutionVertex vertex : affectedSchedulingExecutionVertices) {
                 final SchedulingPipelinedRegion region =
                         this.getPipelinedRegionOfVertex(vertex.getId());
                 List<ExecutionVertexID> regionMembers =
@@ -204,7 +203,7 @@ public class DefaultExecutionTopology implements SchedulingTopology {
 
         if(scaleOut){
             // request slot for newly created instances
-            scheduler.requestNewSlots(newSchedulingExecutionVertices);
+            scheduler.requestNewSlots(affectedSchedulingExecutionVertices);
         }
 
 
@@ -227,12 +226,10 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         CompletableFuture.allOf(subpartitionFutures.toArray(new CompletableFuture[0]))
                 .thenRun(
                         () -> {
-                            if(scaleIn){
-                                for(ExecutionVertex vertex : affectedVertices){
-                                    vertex.cancel();
-                                }
-                            }
                             scheduler.restartTasksForRescaling(executionVertexIDS);
+                            if(scaleIn){
+                                scheduler.cancelTasksAsync(new HashSet<>(affectedVerticesID));
+                            }
                         });
 
         CompletableFuture.allOf(runningFutures.toArray(new CompletableFuture[0]))

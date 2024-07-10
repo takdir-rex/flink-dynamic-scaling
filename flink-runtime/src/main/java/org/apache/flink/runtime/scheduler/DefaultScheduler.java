@@ -395,7 +395,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         schedulingStrategy.restartTasks(verticesToRestart);
     }
 
-    private CompletableFuture<?> cancelTasksAsync(final Set<ExecutionVertexID> verticesToRestart) {
+    public CompletableFuture<?> cancelTasksAsync(final Set<ExecutionVertexID> verticesToRestart) {
         // clean up all the related pending requests to avoid that immediately returned slot
         // is used to fulfill the pending requests of these tasks
         verticesToRestart.stream().forEach(executionSlotAllocator::cancel);
