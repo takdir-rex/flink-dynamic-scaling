@@ -1,0 +1,90 @@
+# remove previous image
+docker image rm openjdk-ssh
+# set FLINK_HOME variable before build the docker image
+docker build -t openjdk-ssh .
+
+# server 1
+
+docker run -t -d --name jm -p 8081:8081 --expose 9098 --expose 6123 --expose 9249 -m 8g --cpuset-cpus="0-1" --network flink-net --ip=10.0.1.10 -v /home/flink1/docker/data:/data -v /home/flink1/docker/tmp/jm:/tmp openjdk-ssh
+
+# server 2
+
+docker run -t -d --name tm201 --expose 9249 -m 4g --cpuset-cpus="0-1" --network flink-net --ip=10.0.1.201 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm201:/tmp openjdk-ssh
+docker run -t -d --name tm202 --expose 9249 -m 4g --cpuset-cpus="1-2" --network flink-net --ip=10.0.1.202 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm202:/tmp openjdk-ssh
+docker run -t -d --name tm203 --expose 9249 -m 4g --cpuset-cpus="2-3" --network flink-net --ip=10.0.1.203 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm203:/tmp openjdk-ssh
+docker run -t -d --name tm204 --expose 9249 -m 4g --cpuset-cpus="3-4" --network flink-net --ip=10.0.1.204 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm204:/tmp openjdk-ssh
+docker run -t -d --name tm205 --expose 9249 -m 4g --cpuset-cpus="4-5" --network flink-net --ip=10.0.1.205 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm205:/tmp openjdk-ssh
+docker run -t -d --name tm206 --expose 9249 -m 4g --cpuset-cpus="5-6" --network flink-net --ip=10.0.1.206 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm206:/tmp openjdk-ssh
+docker run -t -d --name tm207 --expose 9249 -m 4g --cpuset-cpus="6-7" --network flink-net --ip=10.0.1.207 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm207:/tmp openjdk-ssh
+docker run -t -d --name tm208 --expose 9249 -m 4g --cpuset-cpus="7-8" --network flink-net --ip=10.0.1.208 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm208:/tmp openjdk-ssh
+docker run -t -d --name tm209 --expose 9249 -m 4g --cpuset-cpus="8-9" --network flink-net --ip=10.0.1.209 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm209:/tmp openjdk-ssh
+docker run -t -d --name tm210 --expose 9249 -m 4g --cpuset-cpus="9-10" --network flink-net --ip=10.0.1.210 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm210:/tmp openjdk-ssh
+docker run -t -d --name tm211 --expose 9249 -m 4g --cpuset-cpus="10-11" --network flink-net --ip=10.0.1.211 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm211:/tmp openjdk-ssh
+docker run -t -d --name tm212 --expose 9249 -m 4g --cpuset-cpus="11-12" --network flink-net --ip=10.0.1.212 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm212:/tmp openjdk-ssh
+docker run -t -d --name tm213 --expose 9249 -m 4g --cpuset-cpus="12-13" --network flink-net --ip=10.0.1.213 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm213:/tmp openjdk-ssh
+docker run -t -d --name tm214 --expose 9249 -m 4g --cpuset-cpus="13-14" --network flink-net --ip=10.0.1.214 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm214:/tmp openjdk-ssh
+docker run -t -d --name tm215 --expose 9249 -m 4g --cpuset-cpus="14-15" --network flink-net --ip=10.0.1.215 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm215:/tmp openjdk-ssh
+docker run -t -d --name tm216 --expose 9249 -m 4g --cpuset-cpus="15,0" --network flink-net --ip=10.0.1.216 -v /home/flink2/docker/data:/data -v /home/flink2/docker/tmp/tm216:/tmp openjdk-ssh
+
+# server 3
+
+docker run -t -d --name tm301 --expose 9249 -m 4g --cpuset-cpus="0-1" --network flink-net --ip=10.0.1.101 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm301:/tmp openjdk-ssh
+docker run -t -d --name tm302 --expose 9249 -m 4g --cpuset-cpus="1-2" --network flink-net --ip=10.0.1.102 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm302:/tmp openjdk-ssh
+docker run -t -d --name tm303 --expose 9249 -m 4g --cpuset-cpus="2-3" --network flink-net --ip=10.0.1.103 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm303:/tmp openjdk-ssh
+docker run -t -d --name tm304 --expose 9249 -m 4g --cpuset-cpus="3-4" --network flink-net --ip=10.0.1.104 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm304:/tmp openjdk-ssh
+docker run -t -d --name tm305 --expose 9249 -m 4g --cpuset-cpus="4-5" --network flink-net --ip=10.0.1.105 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm305:/tmp openjdk-ssh
+docker run -t -d --name tm306 --expose 9249 -m 4g --cpuset-cpus="5-6" --network flink-net --ip=10.0.1.106 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm306:/tmp openjdk-ssh
+docker run -t -d --name tm307 --expose 9249 -m 4g --cpuset-cpus="6-7" --network flink-net --ip=10.0.1.107 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm307:/tmp openjdk-ssh
+docker run -t -d --name tm308 --expose 9249 -m 4g --cpuset-cpus="7-8" --network flink-net --ip=10.0.1.108 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm308:/tmp openjdk-ssh
+docker run -t -d --name tm309 --expose 9249 -m 4g --cpuset-cpus="8-9" --network flink-net --ip=10.0.1.109 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm309:/tmp openjdk-ssh
+docker run -t -d --name tm310 --expose 9249 -m 4g --cpuset-cpus="9-10" --network flink-net --ip=10.0.1.110 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm310:/tmp openjdk-ssh
+docker run -t -d --name tm311 --expose 9249 -m 4g --cpuset-cpus="10-11" --network flink-net --ip=10.0.1.111 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm311:/tmp openjdk-ssh
+docker run -t -d --name tm312 --expose 9249 -m 4g --cpuset-cpus="11-12" --network flink-net --ip=10.0.1.112 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm312:/tmp openjdk-ssh
+docker run -t -d --name tm313 --expose 9249 -m 4g --cpuset-cpus="12-13" --network flink-net --ip=10.0.1.113 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm313:/tmp openjdk-ssh
+docker run -t -d --name tm314 --expose 9249 -m 4g --cpuset-cpus="13-14" --network flink-net --ip=10.0.1.114 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm314:/tmp openjdk-ssh
+docker run -t -d --name tm315 --expose 9249 -m 4g --cpuset-cpus="14-15" --network flink-net --ip=10.0.1.115 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm315:/tmp openjdk-ssh
+docker run -t -d --name tm316 --expose 9249 -m 4g --cpuset-cpus="15,0" --network flink-net --ip=10.0.1.116 -v /home/flink3/docker/data:/data -v /home/flink3/docker/tmp/tm316:/tmp openjdk-ssh
+
+# kafka at Server 1
+wget https://downloads.apache.org/kafka/3.3.2/kafka_2.13-3.3.2.tgz
+tar -xzf kafka_2.13-3.3.2.tgz
+mv kafka_2.13-3.3.2 kafka
+
+docker run -t -d --name kafka --expose 9092 -m 8g --cpuset-cpus="14-15" --network flink-net --ip=10.0.1.30 -v /home/flink1/docker/data:/data -v /home/flink1/docker/tmp/kafka:/tmp openjdk-ssh
+# start
+docker exec -d kafka /data/shared/kafka/bin/zookeeper-server-start.sh /data/shared/kafka/config/zookeeper.properties
+docker exec -d kafka /data/shared/kafka/bin/kafka-server-start.sh /data/shared/kafka/config/server.properties
+# create topic
+docker exec kafka /data/shared/kafka/bin/kafka-topics.sh --create --topic nexmark --bootstrap-server localhost:9092 --partitions 16
+# download flink sql kafka connector and put in flink/lib/
+# Set kafka.bootstrap.servers in nexmark.yaml
+# Prepare source data:
+docker exec jm /data/shared/nexmark/bin/run_query.sh insert_kafka
+# check the data:
+docker exec kafka /data/shared/kafka/bin/kafka-console-consumer.sh --topic nexmark --from-beginning --bootstrap-server localhost:9092
+# shutdown
+docker exec kafka /data/shared/kafka/bin/zookeeper-server-stop.sh
+docker exec kafka /data/shared/kafka/bin/kafka-server-stop.sh
+# delete topic
+docker exec kafka /data/shared/kafka/bin/kafka-topics.sh --delete --topic nexmark --bootstrap-server localhost:9092
+# cleaning
+sudo rm -f /home/flink1/docker/data/shared/kafka/logs/*
+sudo rm -rf /home/flink1/docker/tmp/kafka
+
+# Prometheus at Server 1
+docker run -t -d --name prometheus -p 9090:9090 -m 8g --cpuset-cpus="2-5" --network flink-net --ip=10.0.1.30 -v /home/flink1/docker/data/shared/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml -v /home/flink1/docker/data/shared/prometheus/flink.rules.yml:/etc/prometheus/flink.rules.yml -v /home/flink1/docker/tmp/prometheus:/tmp prom/prometheus:latest
+
+# Grafana at Server 1
+docker run -t -d --name grafana -p 3000:3000 -e GF_SECURITY_ADMIN_PASSWORD=flink -m 8g --cpuset-cpus="6-9" --network flink-net --ip=10.0.1.31 -v /home/flink1/docker/data/shared/grafana/provisioning:/etc/grafana/provisioning -v /home/flink1/docker/tmp/grafana:/tmp grafana/grafana:latest
+
+
+# Common docker commands
+docker ps
+docker start $(docker ps -a -q)
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
+
+docker exec -it jm /bin/bash
+
+docker exec jm /data/shared/flink/bin/start-cluster.sh
+docker exec jm /data/shared/flink/bin/stop-cluster.sh
