@@ -3,6 +3,11 @@
 Enable scaling in Apache Flink dynamically without redeploying the streaming job.
 
 This repository was developed from https://github.com/apache/flink/tree/release-1.14 and modified to enable dynamic scaling. Please refer to that URL for compilation.
+Alternatively, we provide executable binary file here: https://github.com/takdir-rex/flink-dynamic-scaling/releases/tag/experimental . Start the flink cluster using the following command:
+ ```
+  bin\start-cluster.sh
+ ```
+Please refer to the Flink documentation for the details.
 
 ### Features
 
