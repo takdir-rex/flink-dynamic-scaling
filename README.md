@@ -2,7 +2,7 @@
 
 Enable scaling in Apache Flink dynamically without redeploying the streaming job.
 
-This repository was developed from https://github.com/apache/flink/tree/release-1.14 and modified to enable dynamic scaling.
+This repository was developed from https://github.com/apache/flink/tree/release-1.14 and modified to enable dynamic scaling. Please refer to that URL for compilation.
 
 ### Features
 
