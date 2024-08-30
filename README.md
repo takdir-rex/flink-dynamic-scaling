@@ -19,5 +19,6 @@ Please refer to the Flink documentation for the details.
 * Nexmark modification in https://github.com/takdir-rex/nexmark-windowed can be used for evaluation.
   Change the queries in https://github.com/takdir-rex/nexmark-windowed/tree/master/nexmark-flink/src/main/resources/queries as required.
   This dynamic scaling was evaluated using some selected original versions of Nexmark queries as in https://github.com/nexmark/nexmark/tree/master/nexmark-flink/src/main/resources/queries
+  Please refer to the associated repositories for the details. We also provide compiled binary in https://github.com/takdir-rex/flink-dynamic-scaling/releases/tag/experimental
 * A Just-in-Time (JIT) Snapshot is taken in each scaling event.
 * Automation scripts are available at https://github.com/takdir-rex/flink-dynamic-scaling/tree/main/scripts
