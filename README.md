@@ -10,7 +10,7 @@ This repository was developed from https://github.com/apache/flink/tree/release-
   ```
   curl --location --request PATCH "http://job_manager_host:8081/jobs/{job_id}/rescaling?vertex={vertex_id}&parallelism={desired_parallelism}"
   ```
-  You can get vertex_id by inspecting the HTML elements of the Flink web dashboard
+  You can get vertex_id by inspecting the HTML elements of the job topology in the Flink web dashboard
 * Nexmark modification in https://github.com/takdir-rex/nexmark-windowed can be used for evaluation.
   Change the queries in https://github.com/takdir-rex/nexmark-windowed/tree/master/nexmark-flink/src/main/resources/queries as required.
   This dynamic scaling was evaluated using some selected original versions of Nexmark queries as in https://github.com/nexmark/nexmark/tree/master/nexmark-flink/src/main/resources/queries
