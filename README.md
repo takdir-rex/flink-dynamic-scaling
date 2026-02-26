@@ -23,6 +23,6 @@ Please refer to the Flink documentation for the details.
 * A Just-in-Time (JIT) Snapshot is taken in each scaling event.
 * Automation scripts are available at https://github.com/takdir-rex/flink-dynamic-scaling/tree/main/scripts
 
-## Citation
+### Citation
 
 [Dynamic Scaling With Just-in-Time Snapshot in Distributed Stream Processing Systems](https://ieeexplore.ieee.org/document/11271510)
